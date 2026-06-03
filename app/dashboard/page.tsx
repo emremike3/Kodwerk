@@ -74,7 +74,14 @@ export default function Dashboard() {
           />
         </div>
         
-        <button className="send-btn" onClick={generateCode} disabled={loading}>
+        <button 
+          className="send-btn" 
+          onClick={() => {
+            alert("geklickt!");
+            generateCode();
+          }}
+          disabled={loading}
+        >
           {loading ? "Generiert..." : "Code generieren ⚡"}
         </button>
         <p className="credits">5 von 5 kostenlosen Anfragen heute verfügbar</p>
