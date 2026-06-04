@@ -1,11 +1,28 @@
 import { auth } from "@clerk/nextjs/server";
 import { NextRequest, NextResponse } from "next/server";
+import { Redis } from "@upstash/redis";
+
+const redis = new Redis({
+  url: process.env.KV_REST_API_URL!,
+  token: process.env.KV_REST_API_TOKEN!,
+});
+
+const FREE_LIMIT = 5;
 
 export async function POST(req: NextRequest) {
   const { userId } = await auth();
   
   if (!userId) {
     return NextResponse.json({ error: "Nicht eingeloggt" }, { status: 401 });
+  }
+
+  const today = new Date().toISOString().split("T")[0];
+  const key = `credits:${userId}:${today}`;
+  
+  const used = (await redis.get<number>(key)) || 0;
+  
+  if (used >= FREE_LIMIT) {
+    return NextResponse.json({ error: "Tageslimit erreicht! Upgrade auf Pro für mehr Anfragen." }, { status: 429 });
   }
 
   const { prompt } = await req.json();
@@ -34,5 +51,8 @@ export async function POST(req: NextRequest) {
   const data = await response.json();
   const raw = data.choices?.[0]?.message?.content || "Fehler beim Generieren";
   const code = raw.replace(/```lua\n?/g, "").replace(/```\n?/g, "").trim();
-  return NextResponse.json({ code });
+
+  await redis.set(key, used + 1, { ex: 86400 });
+
+  return NextResponse.json({ code, remaining: FREE_LIMIT - used - 1 });
 }

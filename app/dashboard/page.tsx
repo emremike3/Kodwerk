@@ -1,16 +1,26 @@
 "use client";
 import { UserButton } from "@clerk/nextjs";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 
 export default function Dashboard() {
   const [prompt, setPrompt] = useState("");
   const [code, setCode] = useState("");
   const [loading, setLoading] = useState(false);
+  const [remaining, setRemaining] = useState<number>(5);
+  const [error, setError] = useState("");
+
+  useEffect(() => {
+    fetch("/api/credits")
+      .then(res => res.json())
+      .then(data => setRemaining(data.remaining));
+  }, []);
 
   async function generateCode() {
     if (!prompt.trim()) return;
     setLoading(true);
     setCode("");
+    setError("");
+    
     try {
       const res = await fetch("/api/generate", {
         method: "POST",
@@ -18,10 +28,17 @@ export default function Dashboard() {
         body: JSON.stringify({ prompt }),
       });
       const data = await res.json();
-      setCode(data.code);
+      
+      if (data.error) {
+        setError(data.error);
+      } else {
+        setCode(data.code);
+        setRemaining(data.remaining);
+      }
     } catch (err) {
       console.error("fehler", err);
     }
+    
     setLoading(false);
   }
 
@@ -47,6 +64,7 @@ export default function Dashboard() {
         .send-btn:hover { background:#FF6B2B; }
         .send-btn:disabled { background:#555; cursor:not-allowed; }
         .credits { font-size:0.8rem; color:var(--gray); text-align:center; margin-top:1rem; }
+        .error { font-size:0.9rem; color:#FF5F57; text-align:center; margin-top:1rem; padding:1rem; background:rgba(255,95,87,0.1); border-radius:8px; }
         .code-output { background:var(--card-bg); border:0.5px solid var(--border); border-radius:12px; padding:1.5rem; margin-top:2rem; }
         .code-label { font-size:0.75rem; text-transform:uppercase; letter-spacing:0.1em; color:var(--gray); margin-bottom:1rem; }
         .code-output pre { font-family:'Courier New',monospace; font-size:0.85rem; line-height:1.7; color:#A8C7A0; white-space:pre-wrap; word-break:break-word; }
@@ -68,10 +86,16 @@ export default function Dashboard() {
             onChange={(e) => setPrompt(e.target.value)}
           />
         </div>
-        <button className="send-btn" onClick={generateCode} disabled={loading}>
+        <button className="send-btn" onClick={generateCode} disabled={loading || remaining === 0}>
           {loading ? "Generiert..." : "Code generieren ⚡"}
         </button>
-        <p className="credits">5 von 5 kostenlosen Anfragen heute verfügbar</p>
+        
+        {error && <div className="error">{error}</div>}
+        
+        <p className="credits">
+          {remaining} von 5 kostenlosen Anfragen heute verfügbar
+        </p>
+
         {code && (
           <div className="code-output">
             <div className="code-label">Generierter Luau Code</div>
