@@ -19,11 +19,23 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: "Ungültiger Token" }, { status: 401 });
   }
 
-  const pendingCode = await redis.get<{code: string, name: string, scriptType: string}>(`pending:${userId}`);
+  const pendingRaw = await redis.get(`pending:${userId}`);
   
-  if (pendingCode) {
+  console.log("pendingRaw:", pendingRaw, "type:", typeof pendingRaw);
+  
+  if (pendingRaw) {
     await redis.del(`pending:${userId}`);
-    return NextResponse.json({ code: pendingCode.code, name: pendingCode.name, scriptType: pendingCode.scriptType });
+    
+    let pendingData = pendingRaw;
+    if (typeof pendingRaw === "string") {
+      try {
+        pendingData = JSON.parse(pendingRaw);
+      } catch {
+        pendingData = { code: pendingRaw, name: "KodwerkScript", scriptType: "LocalScript", location: "StarterPlayerScripts" };
+      }
+    }
+    
+    return NextResponse.json(pendingData);
   }
 
   return NextResponse.json({ code: null });
