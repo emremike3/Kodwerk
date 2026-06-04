@@ -3,8 +3,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { Redis } from "@upstash/redis";
 
 const redis = new Redis({
-  url: process.env.KV_REST_API_URL!,
-  token: process.env.KV_REST_API_TOKEN!,
+  url: process.env.KV_REST_API_URL || "",
+  token: process.env.KV_REST_API_TOKEN || "",
 });
 
 const FREE_LIMIT = 5;
@@ -18,7 +18,6 @@ export async function POST(req: NextRequest) {
 
   const today = new Date().toISOString().split("T")[0];
   const key = `credits:${userId}:${today}`;
-  
   const used = (await redis.get<number>(key)) || 0;
   
   if (used >= FREE_LIMIT) {
@@ -53,6 +52,16 @@ export async function POST(req: NextRequest) {
   const code = raw.replace(/```lua\n?/g, "").replace(/```\n?/g, "").trim();
 
   await redis.set(key, used + 1, { ex: 86400 });
+
+  console.log("Speichere pending fuer userId:", userId);
+  
+  await redis.set(`pending:${userId}`, JSON.stringify({
+    code,
+    name: "KodwerkScript",
+    scriptType: "LocalScript"
+  }), { ex: 300 });
+
+  console.log("Pending gespeichert!");
 
   return NextResponse.json({ code, remaining: FREE_LIMIT - used - 1 });
 }
