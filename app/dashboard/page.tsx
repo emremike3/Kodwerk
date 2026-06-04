@@ -8,11 +8,9 @@ export default function Dashboard() {
   const [loading, setLoading] = useState(false);
 
   async function generateCode() {
-    console.log("geklickt", prompt);
     if (!prompt.trim()) return;
     setLoading(true);
     setCode("");
-    
     try {
       const res = await fetch("/api/generate", {
         method: "POST",
@@ -20,12 +18,10 @@ export default function Dashboard() {
         body: JSON.stringify({ prompt }),
       });
       const data = await res.json();
-      console.log("antwort", data);
       setCode(data.code);
     } catch (err) {
       console.error("fehler", err);
     }
-    
     setLoading(false);
   }
 
@@ -65,7 +61,6 @@ export default function Dashboard() {
       <div className="main">
         <div className="title">Was soll dein Spiel können?</div>
         <p className="subtitle">Beschreibe es auf Deutsch — Kodwerk generiert den Luau Code.</p>
-        
         <div className="input-box">
           <textarea 
             placeholder="z.B. Erstelle ein Sprungsystem..."
@@ -73,19 +68,10 @@ export default function Dashboard() {
             onChange={(e) => setPrompt(e.target.value)}
           />
         </div>
-        
-        <button 
-          className="send-btn" 
-          onClick={() => {
-            alert("geklickt!");
-            generateCode();
-          }}
-          disabled={loading}
-        >
+        <button className="send-btn" onClick={generateCode} disabled={loading}>
           {loading ? "Generiert..." : "Code generieren ⚡"}
         </button>
         <p className="credits">5 von 5 kostenlosen Anfragen heute verfügbar</p>
-
         {code && (
           <div className="code-output">
             <div className="code-label">Generierter Luau Code</div>
