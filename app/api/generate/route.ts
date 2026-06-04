@@ -73,7 +73,7 @@ export async function POST(req: NextRequest) {
   
   console.log("PENDING DATA:", JSON.stringify(pendingData));
   
-  await redis.set(`pending:${userId}`, JSON.stringify(pendingData), { ex: 300 });
+  await redis.set(`pending:${userId}`, pendingData, { ex: 300 });
   
   console.log("PENDING GESPEICHERT!");
 
