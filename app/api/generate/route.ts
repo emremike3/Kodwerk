@@ -11,24 +11,29 @@ export async function POST(req: NextRequest) {
   const { prompt } = await req.json();
 
   try {
-    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key=${process.env.GEMINI_API_KEY}`;
-    
-    const response = await fetch(url, {
+    const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${process.env.GROQ_API_KEY}`,
+      },
       body: JSON.stringify({
-        contents: [{
-          parts: [{
-            text: `Du bist ein Roblox Luau Experte. Generiere nur den Luau Code ohne Erklärungen.\n\nAnfrage: ${prompt}`
-          }]
-        }]
+        model: "llama-3.3-70b-versatile",
+        messages: [
+          {
+            role: "system",
+            content: "Du bist ein Roblox Luau Experte. Generiere nur den Luau Code ohne Erklärungen, nur den reinen Code."
+          },
+          {
+            role: "user",
+            content: prompt
+          }
+        ],
       }),
     });
 
     const data = await response.json();
-    console.log("Gemini response:", JSON.stringify(data));
-    
-    const code = data.candidates?.[0]?.content?.parts?.[0]?.text || "Fehler beim Generieren";
+    const code = data.choices?.[0]?.message?.content || "Fehler beim Generieren";
     return NextResponse.json({ code });
     
   } catch (err) {
