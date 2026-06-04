@@ -50,22 +50,32 @@ export async function POST(req: NextRequest) {
   const data = await response.json();
   const raw = data.choices?.[0]?.message?.content || "{}";
   
+  console.log("RAW RESPONSE:", raw);
+
   let parsed = { code: "", scriptType: "LocalScript", location: "StarterPlayerScripts", name: "KodwerkScript" };
   try {
     const cleaned = raw.replace(/```json\n?/g, "").replace(/```\n?/g, "").trim();
     parsed = JSON.parse(cleaned);
-  } catch {
+    console.log("PARSED OK:", JSON.stringify(parsed));
+  } catch(e) {
+    console.log("PARSE FEHLER:", e);
     parsed.code = raw;
   }
 
   await redis.set(key, used + 1, { ex: 86400 });
   
-  await redis.set(`pending:${userId}`, JSON.stringify({
+  const pendingData = {
     code: parsed.code,
     name: parsed.name || "KodwerkScript",
     scriptType: parsed.scriptType || "LocalScript",
     location: parsed.location || "StarterPlayerScripts"
-  }), { ex: 300 });
+  };
+  
+  console.log("PENDING DATA:", JSON.stringify(pendingData));
+  
+  await redis.set(`pending:${userId}`, JSON.stringify(pendingData), { ex: 300 });
+  
+  console.log("PENDING GESPEICHERT!");
 
   return NextResponse.json({ code: parsed.code, remaining: FREE_LIMIT - used - 1 });
 }
