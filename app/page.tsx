@@ -230,7 +230,7 @@ export default function Home() {
 
       <footer>
         <div className="logo">Kod<span style={{color: "var(--orange)"}}>werk</span></div>
-        <p>© 2025 Kodwerk. Für die deutsche Roblox-Community.</p>
+        <p>© 2026 Kodwerk. Für die deutsche Roblox-Community.</p>
       </footer>
 
     </main>
