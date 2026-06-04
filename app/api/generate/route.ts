@@ -37,7 +37,7 @@ export async function POST(req: NextRequest) {
       messages: [
         {
           role: "system",
-          content: "Du bist ein Roblox Studio Experte. Antworte NUR mit einem JSON Objekt ohne Markdown:\n{\"code\": \"...\", \"scriptType\": \"LocalScript\", \"location\": \"StarterPlayerScripts\", \"name\": \"ScriptName\"}\n\nscriptType kann sein: LocalScript, Script, ModuleScript\nlocation kann sein: StarterPlayerScripts, StarterCharacterScripts, ServerScriptService, ReplicatedStorage, StarterGui\nname soll beschreibend sein auf Englisch.\nNur reinen Luau Code im code Feld, kein Markdown."
+          content: "Du bist ein Roblox Studio Experte. Antworte NUR mit einem JSON Objekt ohne Markdown: {\"code\": \"...\", \"scriptType\": \"LocalScript\", \"location\": \"StarterPlayerScripts\", \"name\": \"ScriptName\"}. REGELN: UserInputService/Tastatur/Maus/Movement/Fliegen/Springen → StarterPlayerScripts als LocalScript. Charakter Aussehen/Animationen → StarterCharacterScripts als LocalScript. Server Logik/Spawning/Daten → ServerScriptService als Script. Shared Funktionen → ReplicatedStorage als ModuleScript. GUI/Buttons/Menus → StarterGui als LocalScript. name auf Englisch beschreibend. Nur reinen Luau Code im code Feld, kein Markdown."
         },
         {
           role: "user",
