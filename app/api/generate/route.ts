@@ -37,7 +37,7 @@ export async function POST(req: NextRequest) {
       messages: [
         {
           role: "system",
-          content: "Du bist ein Roblox Studio Experte. Antworte NUR mit einem JSON Objekt in diesem Format ohne Markdown:\n{\"code\": \"...\", \"scriptType\": \"LocalScript\", \"location\": \"StarterPlayerScripts\", \"name\": \"ScriptName\"}\n\nscriptType kann sein: LocalScript, Script, ModuleScript\nlocation kann sein: StarterPlayerScripts, StarterCharacterScripts, ServerScriptService, ReplicatedStorage, StarterGui\nname soll beschreibend sein auf Englisch.\nNur reinen Luau Code im code Feld, kein Markdown."
+          content: "Du bist ein Roblox Studio Experte. Antworte NUR mit einem JSON Objekt ohne Markdown:\n{\"code\": \"...\", \"scriptType\": \"LocalScript\", \"location\": \"StarterPlayerScripts\", \"name\": \"ScriptName\"}\n\nscriptType kann sein: LocalScript, Script, ModuleScript\nlocation kann sein: StarterPlayerScripts, StarterCharacterScripts, ServerScriptService, ReplicatedStorage, StarterGui\nname soll beschreibend sein auf Englisch.\nNur reinen Luau Code im code Feld, kein Markdown."
         },
         {
           role: "user",
@@ -48,20 +48,24 @@ export async function POST(req: NextRequest) {
   });
 
   const data = await response.json();
-  const raw = data.choices?.[0]?.message?.content || "Fehler beim Generieren";
-  const code = raw.replace(/```lua\n?/g, "").replace(/```\n?/g, "").trim();
+  const raw = data.choices?.[0]?.message?.content || "{}";
+  
+  let parsed = { code: "", scriptType: "LocalScript", location: "StarterPlayerScripts", name: "KodwerkScript" };
+  try {
+    const cleaned = raw.replace(/```json\n?/g, "").replace(/```\n?/g, "").trim();
+    parsed = JSON.parse(cleaned);
+  } catch {
+    parsed.code = raw;
+  }
 
   await redis.set(key, used + 1, { ex: 86400 });
-
-  console.log("Speichere pending fuer userId:", userId);
   
   await redis.set(`pending:${userId}`, JSON.stringify({
-    code,
-    name: "KodwerkScript",
-    scriptType: "LocalScript"
+    code: parsed.code,
+    name: parsed.name || "KodwerkScript",
+    scriptType: parsed.scriptType || "LocalScript",
+    location: parsed.location || "StarterPlayerScripts"
   }), { ex: 300 });
 
-  console.log("Pending gespeichert!");
-
-  return NextResponse.json({ code, remaining: FREE_LIMIT - used - 1 });
+  return NextResponse.json({ code: parsed.code, remaining: FREE_LIMIT - used - 1 });
 }
