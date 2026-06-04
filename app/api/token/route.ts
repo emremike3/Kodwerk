@@ -19,6 +19,10 @@ export async function GET() {
   if (!token) {
     token = Math.random().toString(36).substring(2) + Math.random().toString(36).substring(2);
     await redis.set(`token:${userId}`, token);
+    await redis.set(`token_to_user:${token}`, userId);
+  } else {
+    // Sicherstellen dass token_to_user auch existiert
+    await redis.set(`token_to_user:${token}`, userId);
   }
 
   return NextResponse.json({ token });
