@@ -9,7 +9,7 @@ export default function SignInPage() {
       minHeight: "100vh",
       background: "#0E0E0E",
     }}>
-      <SignIn />
+      <SignIn forceRedirectUrl="/dashboard" />
     </main>
   );
 }
