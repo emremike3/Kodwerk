@@ -69,11 +69,16 @@ export default function Dashboard() {
         .code-label { font-size:0.75rem; text-transform:uppercase; letter-spacing:0.1em; color:var(--gray); margin-bottom:1rem; }
         .code-output pre { font-family:'Courier New',monospace; font-size:0.85rem; line-height:1.7; color:#A8C7A0; white-space:pre-wrap; word-break:break-word; }
         .copy-btn { background:transparent; border:0.5px solid var(--border); color:#F5F2ED; padding:0.5rem 1rem; border-radius:6px; font-family:'DM Sans',sans-serif; font-size:0.8rem; cursor:pointer; margin-top:1rem; }
+        .plugin-link { color:var(--gray); text-decoration:none; font-size:0.85rem; transition:color 0.2s; }
+        .plugin-link:hover { color:#F5F2ED; }
       `}</style>
 
       <div className="topbar">
         <a href="/" className="logo">Kod<span>werk</span></a>
-        <UserButton />
+        <div style={{display:"flex", alignItems:"center", gap:"1rem"}}>
+          <a href="/dashboard/token" className="plugin-link">🔌 Plugin verbinden</a>
+          <UserButton />
+        </div>
       </div>
 
       <div className="main">
