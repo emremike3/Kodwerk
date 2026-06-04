@@ -36,7 +36,7 @@ export default function Dashboard() {
         @import url('https://fonts.googleapis.com/css2?family=Syne:wght@400;700;800&family=DM+Sans:wght@400;500&display=swap');
         :root { --orange: #E8500A; --card-bg: #1A1A18; --border: rgba(255,255,255,0.08); --gray: #6B6860; }
         .topbar { display:flex; align-items:center; justify-content:space-between; padding:1rem 2rem; border-bottom:0.5px solid var(--border); }
-        .logo { font-family:'Syne',sans-serif; font-weight:800; font-size:1.2rem; }
+        .logo { font-family:'Syne',sans-serif; font-weight:800; font-size:1.2rem; color:#F5F2ED; text-decoration:none; }
         .logo span { color:var(--orange); }
         .main { max-width:800px; margin:3rem auto; padding:0 2rem; }
         .title { font-family:'Syne',sans-serif; font-size:1.8rem; font-weight:700; margin-bottom:0.5rem; }
@@ -54,7 +54,7 @@ export default function Dashboard() {
       `}</style>
 
       <div className="topbar">
-        <div className="logo">Kod<span>werk</span></div>
+        <a href="/" className="logo">Kod<span>werk</span></a>
         <UserButton />
       </div>
 
