@@ -14,12 +14,17 @@ export async function GET(req: NextRequest) {
   }
 
   const userId = await redis.get<string>(`token_to_user:${token}`);
-  const pendingCode = userId ? await redis.get<string>(`pending:${userId}`) : null;
+  
+  if (!userId) {
+    return NextResponse.json({ error: "Ungültiger Token" }, { status: 401 });
+  }
 
-  return NextResponse.json({ 
-    token: token.substring(0, 10) + "...",
-    userId,
-    hasPending: !!pendingCode,
-    code: pendingCode ? JSON.parse(pendingCode).code : null
-  });
+  const pendingCode = await redis.get<{code: string, name: string, scriptType: string}>(`pending:${userId}`);
+  
+  if (pendingCode) {
+    await redis.del(`pending:${userId}`);
+    return NextResponse.json({ code: pendingCode.code, name: pendingCode.name, scriptType: pendingCode.scriptType });
+  }
+
+  return NextResponse.json({ code: null });
 }
