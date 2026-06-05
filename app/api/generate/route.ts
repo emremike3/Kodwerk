@@ -51,11 +51,11 @@ export async function POST(req: NextRequest) {
 
   const message = await anthropic.messages.create({
     model: "claude-sonnet-4-6",
-    max_tokens: 2048,
+    max_tokens: 4096,
     messages: [
       {
         role: "user",
-        content: `Du bist ein erfahrener Roblox Studio Entwickler. Generiere funktionierenden Luau Code für Roblox.
+        content: `Du bist ein erfahrener Roblox Studio Entwickler. Generiere einfachen, funktionierenden Luau Code.
 
 Antworte NUR mit JSON (kein Markdown, keine Erklärungen):
 {"code": "...", "scriptType": "LocalScript", "location": "StarterPlayerScripts", "name": "ScriptName"}
@@ -68,15 +68,14 @@ ORTE REGELN:
 - Shared Funktionen → ReplicatedStorage (ModuleScript)
 
 WICHTIGE ROBLOX REGELN:
-- NIEMALS BodyVelocity, BodyGyro, BodyPosition, BodyAngularVelocity benutzen - diese sind DEPRECATED!
-- Für Bewegung/Fliegen: humanoid.PlatformStand = true + rootPart.AssemblyLinearVelocity
-- Für Velocity: rootPart.AssemblyLinearVelocity statt rootPart.Velocity
+- NIEMALS BodyVelocity, BodyGyro, BodyPosition benutzen - DEPRECATED!
+- Für Fliegen: LinearVelocity mit Attachment benutzen ODER einfach rootPart.CFrame setzen
+- Für Velocity: rootPart.AssemblyLinearVelocity
 - IMMER game:GetService() benutzen
 - IMMER WaitForChild() benutzen
 - Character: player.Character or player.CharacterAdded:Wait()
-- RunService.Heartbeat statt RenderStepped für Bewegungslogik im LocalScript
-- Vollständiger funktionierender Code ohne TODOs oder Platzhalter
-- Keine deprecated APIs verwenden
+- EINFACHEN Code generieren - keine unnötigen Effekte außer wenn explizit gefragt
+- Vollständiger funktionierender Code
 
 Aufgabe: ${prompt}`
       }
@@ -89,6 +88,7 @@ Aufgabe: ${prompt}`
   try {
     const cleaned = raw.replace(/```json\n?/g, "").replace(/```\n?/g, "").trim();
     parsed = JSON.parse(cleaned);
+    parsed.code = parsed.code.replace(/\\n/g, "\n");
   } catch {
     parsed.code = raw;
   }
