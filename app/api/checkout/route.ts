@@ -30,38 +30,6 @@ export async function POST(req: NextRequest) {
 
   const customerId = await redis.get<string>(`stripe_customer:${userId}`);
 
-  // Wenn User bereits ein Abo hat → wechseln
-  if (customerId) {
-    const subscriptions = await stripe.subscriptions.list({
-      customer: customerId,
-      status: "active",
-    });
-
-    if (subscriptions.data.length > 0) {
-      const sub = subscriptions.data[0] as any;
-      const currentPriceId = sub.items?.data?.[0]?.price?.id;
-
-      if (currentPriceId === priceId) {
-        return NextResponse.json({ error: "Du bist bereits auf diesem Plan" }, { status: 400 });
-      }
-
-      // Plan wechseln
-      await stripe.subscriptions.update(sub.id, {
-        items: [{
-          id: sub.items.data[0].id,
-          price: priceId,
-        }],
-        proration_behavior: "always_invoice",
-      });
-
-      await redis.set(`plan:${userId}`, plan);
-      await redis.del(`cancelled:${userId}`);
-
-      return NextResponse.json({ success: true, switched: true });
-    }
-  }
-
-  // Kein Abo → neues Checkout erstellen
   const session = await stripe.checkout.sessions.create({
     payment_method_types: ["card"],
     line_items: [{ price: priceId, quantity: 1 }],
