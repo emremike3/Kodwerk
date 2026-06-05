@@ -31,7 +31,8 @@ export async function GET() {
           status: "active",
         });
         if (subscriptions.data.length > 0) {
-          const renewalTimestamp = subscriptions.data[0].current_period_end;
+          const sub = subscriptions.data[0] as unknown as { current_period_end: number };
+          const renewalTimestamp = sub.current_period_end;
           renewalDate = new Date(renewalTimestamp * 1000).toLocaleDateString("de-DE");
         }
       } catch {
