@@ -6,8 +6,9 @@ export default function Dashboard() {
   const [prompt, setPrompt] = useState("");
   const [code, setCode] = useState("");
   const [loading, setLoading] = useState(false);
-  const [remaining, setRemaining] = useState<number>(5);
+  const [remaining, setRemaining] = useState<number>(3);
   const [error, setError] = useState("");
+  const [checkoutLoading, setCheckoutLoading] = useState("");
 
   useEffect(() => {
     fetch("/api/credits")
@@ -42,6 +43,24 @@ export default function Dashboard() {
     setLoading(false);
   }
 
+  async function checkout(plan: string) {
+    setCheckoutLoading(plan);
+    try {
+      const res = await fetch("/api/checkout", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ plan }),
+      });
+      const data = await res.json();
+      if (data.url) {
+        window.location.href = data.url;
+      }
+    } catch (err) {
+      console.error("checkout fehler", err);
+    }
+    setCheckoutLoading("");
+  }
+
   return (
     <main style={{
       fontFamily: "'DM Sans', sans-serif",
@@ -71,6 +90,14 @@ export default function Dashboard() {
         .copy-btn { background:transparent; border:0.5px solid var(--border); color:#F5F2ED; padding:0.5rem 1rem; border-radius:6px; font-family:'DM Sans',sans-serif; font-size:0.8rem; cursor:pointer; margin-top:1rem; }
         .plugin-link { color:var(--gray); text-decoration:none; font-size:0.85rem; transition:color 0.2s; }
         .plugin-link:hover { color:#F5F2ED; }
+        .upgrade-box { background:var(--card-bg); border:0.5px solid var(--border); border-radius:12px; padding:1.5rem; margin-top:2rem; display:flex; gap:1rem; align-items:center; justify-content:space-between; flex-wrap:wrap; }
+        .upgrade-text { font-size:0.9rem; color:var(--gray); }
+        .upgrade-text strong { color:#F5F2ED; }
+        .upgrade-btns { display:flex; gap:0.75rem; }
+        .btn-pro { background:var(--orange); color:white; border:none; padding:0.6rem 1.25rem; border-radius:6px; font-family:'DM Sans',sans-serif; font-size:0.85rem; font-weight:500; cursor:pointer; transition:background 0.2s; }
+        .btn-pro:hover { background:#FF6B2B; }
+        .btn-unlimited { background:#7C3AED; color:white; border:none; padding:0.6rem 1.25rem; border-radius:6px; font-family:'DM Sans',sans-serif; font-size:0.85rem; font-weight:500; cursor:pointer; transition:background 0.2s; }
+        .btn-unlimited:hover { background:#6D28D9; }
       `}</style>
 
       <div className="topbar">
@@ -100,6 +127,20 @@ export default function Dashboard() {
         <p className="credits">
           {remaining} von 3 kostenlosen Anfragen heute verfügbar
         </p>
+
+        <div className="upgrade-box">
+          <div className="upgrade-text">
+            <strong>Mehr Anfragen?</strong> Upgrade auf Pro oder Unlimited!
+          </div>
+          <div className="upgrade-btns">
+            <button className="btn-pro" onClick={() => checkout("pro")} disabled={checkoutLoading === "pro"}>
+              {checkoutLoading === "pro" ? "Lädt..." : "Pro — 12€/Monat"}
+            </button>
+            <button className="btn-unlimited" onClick={() => checkout("unlimited")} disabled={checkoutLoading === "unlimited"}>
+              {checkoutLoading === "unlimited" ? "Lädt..." : "Unlimited — 29€/Monat"}
+            </button>
+          </div>
+        </div>
 
         {code && (
           <div className="code-output">
