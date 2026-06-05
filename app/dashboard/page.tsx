@@ -2,6 +2,11 @@
 import { UserButton } from "@clerk/nextjs";
 import { useState, useEffect } from "react";
 
+interface Message {
+  role: "user" | "assistant";
+  content: string;
+}
+
 export default function Dashboard() {
   const [prompt, setPrompt] = useState("");
   const [code, setCode] = useState("");
@@ -10,6 +15,8 @@ export default function Dashboard() {
   const [plan, setPlan] = useState("free");
   const [error, setError] = useState("");
   const [checkoutLoading, setCheckoutLoading] = useState("");
+  const [history, setHistory] = useState<Message[]>([]);
+  const [chatHistory, setChatHistory] = useState<{prompt: string, code: string}[]>([]);
 
   useEffect(() => {
     fetch("/api/credits")
@@ -26,11 +33,13 @@ export default function Dashboard() {
     setCode("");
     setError("");
     
+    const newHistory: Message[] = [...history, { role: "user", content: prompt }];
+    
     try {
       const res = await fetch("/api/generate", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ prompt }),
+        body: JSON.stringify({ prompt, history }),
       });
       const data = await res.json();
       
@@ -40,6 +49,14 @@ export default function Dashboard() {
         setCode(data.code);
         setRemaining(data.remaining);
         setPlan(data.plan);
+        
+        setHistory([
+          ...newHistory,
+          { role: "assistant", content: `Ich habe folgenden Code generiert:\n\`\`\`lua\n${data.code}\n\`\`\`` }
+        ]);
+        
+        setChatHistory(prev => [...prev, { prompt, code: data.code }]);
+        setPrompt("");
       }
     } catch (err) {
       console.error("fehler", err);
@@ -94,11 +111,16 @@ export default function Dashboard() {
         .topbar { display:flex; align-items:center; justify-content:space-between; padding:1rem 2rem; border-bottom:0.5px solid var(--border); }
         .logo { font-family:'Syne',sans-serif; font-weight:800; font-size:1.2rem; color:#F5F2ED; text-decoration:none; }
         .logo span { color:var(--orange); }
-        .main { max-width:800px; margin:3rem auto; padding:0 2rem; }
+        .main { max-width:800px; margin:2rem auto; padding:0 2rem; }
         .title { font-family:'Syne',sans-serif; font-size:1.8rem; font-weight:700; margin-bottom:0.5rem; }
-        .subtitle { color:var(--gray); margin-bottom:2rem; }
+        .subtitle { color:var(--gray); margin-bottom:1.5rem; }
+        .chat-history { display:flex; flex-direction:column; gap:1rem; margin-bottom:1.5rem; }
+        .chat-item { background:var(--card-bg); border:0.5px solid var(--border); border-radius:12px; padding:1rem; }
+        .chat-prompt { font-size:0.85rem; color:var(--gray); margin-bottom:0.5rem; }
+        .chat-prompt strong { color:#F5F2ED; }
+        .chat-code { font-family:'Courier New',monospace; font-size:0.78rem; color:#A8C7A0; background:rgba(0,0,0,0.3); padding:0.75rem; border-radius:8px; white-space:pre-wrap; word-break:break-word; max-height:150px; overflow-y:auto; }
         .input-box { background:var(--card-bg); border:0.5px solid var(--border); border-radius:12px; padding:1.5rem; margin-bottom:1rem; }
-        .input-box textarea { width:100%; background:transparent; border:none; color:#F5F2ED; font-family:'DM Sans',sans-serif; font-size:1rem; resize:none; outline:none; min-height:120px; }
+        .input-box textarea { width:100%; background:transparent; border:none; color:#F5F2ED; font-family:'DM Sans',sans-serif; font-size:1rem; resize:none; outline:none; min-height:100px; }
         .send-btn { background:var(--orange); color:white; border:none; padding:0.85rem 2rem; border-radius:8px; font-family:'DM Sans',sans-serif; font-size:1rem; font-weight:500; cursor:pointer; width:100%; transition:background 0.2s; }
         .send-btn:hover { background:#FF6B2B; }
         .send-btn:disabled { background:#555; cursor:not-allowed; }
@@ -120,6 +142,8 @@ export default function Dashboard() {
         .btn-unlimited { background:#7C3AED; color:white; border:none; padding:0.6rem 1.25rem; border-radius:6px; font-family:'DM Sans',sans-serif; font-size:0.85rem; font-weight:500; cursor:pointer; transition:background 0.2s; }
         .btn-unlimited:hover { background:#6D28D9; }
         .btn-unlimited:disabled { opacity:0.5; cursor:not-allowed; }
+        .clear-btn { background:transparent; border:0.5px solid var(--border); color:var(--gray); padding:0.4rem 0.85rem; border-radius:6px; font-family:'DM Sans',sans-serif; font-size:0.8rem; cursor:pointer; }
+        .clear-btn:hover { color:#F5F2ED; }
       `}</style>
 
       <div className="topbar">
@@ -134,10 +158,26 @@ export default function Dashboard() {
 
       <div className="main">
         <div className="title">Was soll dein Spiel können?</div>
-        <p className="subtitle">Beschreibe es auf Deutsch — Kodwerk generiert den Luau Code.</p>
+        <p className="subtitle">Beschreibe es auf Deutsch — Kodwerk baut es für dich.</p>
+
+        {chatHistory.length > 0 && (
+          <div className="chat-history">
+            <div style={{display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:"0.5rem"}}>
+              <span style={{fontSize:"0.75rem", color:"var(--gray)", textTransform:"uppercase", letterSpacing:"0.1em"}}>Verlauf dieser Session</span>
+              <button className="clear-btn" onClick={() => { setHistory([]); setChatHistory([]); }}>Verlauf löschen</button>
+            </div>
+            {chatHistory.map((item, i) => (
+              <div key={i} className="chat-item">
+                <div className="chat-prompt"><strong>Du:</strong> {item.prompt}</div>
+                <div className="chat-code">{item.code}</div>
+              </div>
+            ))}
+          </div>
+        )}
+
         <div className="input-box">
           <textarea 
-            placeholder="z.B. Erstelle ein Sprungsystem..."
+            placeholder={chatHistory.length > 0 ? "Weitere Anpassungen oder neue Features beschreiben..." : "z.B. Erstelle ein Sprungsystem..."}
             value={prompt}
             onChange={(e) => setPrompt(e.target.value)}
           />
@@ -194,7 +234,7 @@ export default function Dashboard() {
 
         {code && (
           <div className="code-output">
-            <div className="code-label">Generierter Luau Code</div>
+            <div className="code-label">Zuletzt generierter Code</div>
             <pre>{code}</pre>
             <button className="copy-btn" onClick={() => navigator.clipboard.writeText(code)}>
               Code kopieren 📋

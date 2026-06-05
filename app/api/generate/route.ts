@@ -47,15 +47,9 @@ export async function POST(req: NextRequest) {
     remaining = FREE_LIMIT - used - 1;
   }
 
-  const { prompt } = await req.json();
+  const { prompt, history = [] } = await req.json();
 
-  const message = await anthropic.messages.create({
-    model: "claude-sonnet-4-6",
-    max_tokens: 4096,
-    messages: [
-      {
-        role: "user",
-        content: `Du bist ein erfahrener Roblox Studio Entwickler. Generiere einfachen, funktionierenden Luau Code.
+  const systemPrompt = `Du bist ein erfahrener Roblox Studio Entwickler. Generiere einfachen, funktionierenden Luau Code.
 
 Antworte NUR mit JSON (kein Markdown, keine Erklärungen):
 {"code": "...", "scriptType": "LocalScript", "location": "StarterPlayerScripts", "name": "ScriptName"}
@@ -69,17 +63,24 @@ ORTE REGELN:
 
 WICHTIGE ROBLOX REGELN:
 - NIEMALS BodyVelocity, BodyGyro, BodyPosition benutzen - DEPRECATED!
-- Für Fliegen: LinearVelocity mit Attachment benutzen ODER einfach rootPart.CFrame setzen
+- Für Fliegen: LinearVelocity mit Attachment benutzen ODER rootPart.CFrame setzen
 - Für Velocity: rootPart.AssemblyLinearVelocity
 - IMMER game:GetService() benutzen
 - IMMER WaitForChild() benutzen
 - Character: player.Character or player.CharacterAdded:Wait()
 - EINFACHEN Code generieren - keine unnötigen Effekte außer wenn explizit gefragt
-- Vollständiger funktionierender Code
+- Vollständiger funktionierender Code ohne TODOs`;
 
-Aufgabe: ${prompt}`
-      }
-    ],
+  const messages = [
+    ...history,
+    { role: "user" as const, content: prompt }
+  ];
+
+  const message = await anthropic.messages.create({
+    model: "claude-sonnet-4-6",
+    max_tokens: 4096,
+    system: systemPrompt,
+    messages,
   });
 
   const raw = message.content[0].type === "text" ? message.content[0].text : "{}";
