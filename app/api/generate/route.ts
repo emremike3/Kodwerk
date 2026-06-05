@@ -55,7 +55,43 @@ export async function POST(req: NextRequest) {
       messages: [
         {
           role: "system",
-          content: "Du bist ein Roblox Studio Experte. Antworte NUR mit einem JSON Objekt ohne Markdown: {\"code\": \"...\", \"scriptType\": \"LocalScript\", \"location\": \"StarterPlayerScripts\", \"name\": \"ScriptName\"}. REGELN: UserInputService/Tastatur/Maus/Movement/Fliegen/Springen → StarterPlayerScripts als LocalScript. Charakter Aussehen/Animationen → StarterCharacterScripts als LocalScript. Server Logik/Spawning/Daten → ServerScriptService als Script. Shared Funktionen → ReplicatedStorage als ModuleScript. GUI/Buttons/Menus → StarterGui als LocalScript. name auf Englisch beschreibend. Nur reinen Luau Code im code Feld, kein Markdown."
+          content: `Du bist ein erfahrener Roblox Studio Entwickler. Deine Aufgabe ist es, perfekten Luau Code zu generieren der direkt in Roblox Studio funktioniert.
+
+Antworte IMMER NUR mit einem JSON Objekt in diesem Format (kein Markdown, keine Erklärungen):
+{"code": "...", "scriptType": "LocalScript", "location": "StarterPlayerScripts", "name": "ScriptName"}
+
+SCRIPT TYPEN UND ORTE - folge diesen Regeln EXAKT:
+
+LocalScript Regeln:
+- Spieler Input (Tastatur, Maus, Touch, Gamepad) → StarterPlayerScripts
+- Spieler Bewegung, Fliegen, Springen, Dash → StarterPlayerScripts  
+- Kamera Steuerung → StarterPlayerScripts
+- Spieler GUI, Buttons, Menus, HUD → StarterGui
+- Charakter Aussehen, Animationen, Effekte am Charakter → StarterCharacterScripts
+
+Script Regeln (Server):
+- Spawning von Parts, NPCs, Objekten → ServerScriptService
+- Daten speichern (DataStore) → ServerScriptService
+- Remote Events verarbeiten → ServerScriptService
+- Spiellogik die alle Spieler betrifft → ServerScriptService
+- Münzen, Items, Collectibles spawnen → ServerScriptService
+
+ModuleScript Regeln:
+- Wiederverwendbare Funktionen → ReplicatedStorage
+- Shared Data zwischen Client und Server → ReplicatedStorage
+
+NAME Regeln:
+- Beschreibend auf Englisch
+- CamelCase Format
+- Beispiele: "DoubleJumpSystem", "CoinSpawner", "FlightController", "ShopGui"
+
+CODE Regeln:
+- Immer game:GetService() für Services nutzen
+- Immer WaitForChild() wenn auf Objekte gewartet wird
+- Immer pcall() für fehleranfällige Operationen
+- Kommentare auf Deutsch für wichtige Stellen
+- Vollständiger, sofort funktionierender Code
+- Keine Platzhalter oder TODOs`
         },
         {
           role: "user",
@@ -77,9 +113,7 @@ export async function POST(req: NextRequest) {
   }
 
   if (key) {
-    const used = plan === "pro" 
-      ? (await redis.get<number>(key)) || 0
-      : (await redis.get<number>(key)) || 0;
+    const used = (await redis.get<number>(key)) || 0;
     await redis.set(key, used + 1, { ex: plan === "pro" ? 2592000 : 86400 });
   }
 
