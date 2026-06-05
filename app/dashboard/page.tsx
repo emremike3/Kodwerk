@@ -122,6 +122,7 @@ export default function Dashboard() {
         <div style={{display:"flex", alignItems:"center", gap:"1rem"}}>
           {getPlanBadge()}
           <a href="/dashboard/token" className="plugin-link">🔌 Plugin verbinden</a>
+          <a href="/dashboard/settings" className="plugin-link">⚙️ Einstellungen</a>
           <UserButton />
         </div>
       </div>
