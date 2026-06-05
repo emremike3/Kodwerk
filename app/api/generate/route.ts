@@ -8,6 +8,7 @@ const redis = new Redis({
 });
 
 const FREE_LIMIT = 3;
+const PRO_LIMIT = 1000;
 
 export async function POST(req: NextRequest) {
   const { userId } = await auth();
@@ -16,12 +17,29 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Nicht eingeloggt" }, { status: 401 });
   }
 
-  const today = new Date().toISOString().split("T")[0];
-  const key = `credits:${userId}:${today}`;
-  const used = (await redis.get<number>(key)) || 0;
+  const plan = await redis.get<string>(`plan:${userId}`);
   
-  if (used >= FREE_LIMIT) {
-    return NextResponse.json({ error: "Tageslimit erreicht! Upgrade auf Pro für mehr Anfragen." }, { status: 429 });
+  let remaining = 0;
+  let key = "";
+
+  if (plan === "unlimited") {
+    remaining = -1;
+  } else if (plan === "pro") {
+    const month = new Date().toISOString().substring(0, 7);
+    key = `credits:${userId}:${month}`;
+    const used = (await redis.get<number>(key)) || 0;
+    if (used >= PRO_LIMIT) {
+      return NextResponse.json({ error: "Monatslimit erreicht! Upgrade auf Unlimited für unbegrenzte Anfragen." }, { status: 429 });
+    }
+    remaining = PRO_LIMIT - used - 1;
+  } else {
+    const today = new Date().toISOString().split("T")[0];
+    key = `credits:${userId}:${today}`;
+    const used = (await redis.get<number>(key)) || 0;
+    if (used >= FREE_LIMIT) {
+      return NextResponse.json({ error: "Tageslimit erreicht! Upgrade auf Pro für mehr Anfragen." }, { status: 429 });
+    }
+    remaining = FREE_LIMIT - used - 1;
   }
 
   const { prompt } = await req.json();
@@ -49,33 +67,30 @@ export async function POST(req: NextRequest) {
 
   const data = await response.json();
   const raw = data.choices?.[0]?.message?.content || "{}";
-  
-  console.log("RAW RESPONSE:", raw);
 
   let parsed = { code: "", scriptType: "LocalScript", location: "StarterPlayerScripts", name: "KodwerkScript" };
   try {
     const cleaned = raw.replace(/```json\n?/g, "").replace(/```\n?/g, "").trim();
     parsed = JSON.parse(cleaned);
-    console.log("PARSED OK:", JSON.stringify(parsed));
-  } catch(e) {
-    console.log("PARSE FEHLER:", e);
+  } catch {
     parsed.code = raw;
   }
 
-  await redis.set(key, used + 1, { ex: 86400 });
-  
+  if (key) {
+    const used = plan === "pro" 
+      ? (await redis.get<number>(key)) || 0
+      : (await redis.get<number>(key)) || 0;
+    await redis.set(key, used + 1, { ex: plan === "pro" ? 2592000 : 86400 });
+  }
+
   const pendingData = {
     code: parsed.code,
     name: parsed.name || "KodwerkScript",
     scriptType: parsed.scriptType || "LocalScript",
     location: parsed.location || "StarterPlayerScripts"
   };
-  
-  console.log("PENDING DATA:", JSON.stringify(pendingData));
-  
-  await redis.set(`pending:${userId}`, pendingData, { ex: 300 });
-  
-  console.log("PENDING GESPEICHERT!");
 
-  return NextResponse.json({ code: parsed.code, remaining: FREE_LIMIT - used - 1 });
+  await redis.set(`pending:${userId}`, pendingData, { ex: 300 });
+
+  return NextResponse.json({ code: parsed.code, remaining, plan: plan || "free" });
 }
