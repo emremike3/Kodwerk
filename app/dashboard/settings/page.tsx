@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 
 export default function SettingsPage() {
   const [plan, setPlan] = useState("free");
+  const [renewalDate, setRenewalDate] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [cancelLoading, setCancelLoading] = useState(false);
   const [cancelled, setCancelled] = useState(false);
@@ -12,6 +13,7 @@ export default function SettingsPage() {
       .then(res => res.json())
       .then(data => {
         setPlan(data.plan);
+        setRenewalDate(data.renewalDate);
         setLoading(false);
       });
   }, []);
@@ -62,6 +64,8 @@ export default function SettingsPage() {
         .card { background:var(--card-bg); border:0.5px solid var(--border); border-radius:12px; padding:1.5rem; margin-bottom:1rem; }
         .card-title { font-size:0.75rem; text-transform:uppercase; letter-spacing:0.1em; color:var(--gray); margin-bottom:1rem; }
         .plan-badge { display:inline-block; padding:0.35rem 0.85rem; border-radius:100px; font-size:0.85rem; font-weight:600; margin-bottom:1rem; }
+        .renewal-info { font-size:0.85rem; color:var(--gray); margin-bottom:1rem; padding:0.75rem 1rem; background:rgba(255,255,255,0.04); border-radius:8px; }
+        .renewal-info strong { color:#F5F2ED; }
         .cancel-btn { background:transparent; border:0.5px solid rgba(255,95,87,0.4); color:#FF5F57; padding:0.75rem 1.5rem; border-radius:8px; font-family:'DM Sans',sans-serif; font-size:0.9rem; cursor:pointer; transition:all 0.2s; width:100%; margin-top:1rem; }
         .cancel-btn:hover { background:rgba(255,95,87,0.1); }
         .cancel-btn:disabled { opacity:0.5; cursor:not-allowed; }
@@ -86,11 +90,17 @@ export default function SettingsPage() {
               <div className="plan-badge" style={{background: getPlanColor(), color: "white"}}>
                 {getPlanName()}
               </div>
+
+              {renewalDate && plan !== "free" && !cancelled && (
+                <div className="renewal-info">
+                  Nächste Verlängerung: <strong>{renewalDate}</strong>
+                </div>
+              )}
               
               {plan !== "free" && !cancelled && (
                 <>
                   <p style={{fontSize: "0.85rem", color: "#6B6860", marginBottom: "0.5rem"}}>
-                    Dein Abo verlängert sich automatisch monatlich.
+                    Dein Abo verlängert sich automatisch monatlich und kann jederzeit gekündigt werden.
                   </p>
                   <button 
                     className="cancel-btn" 
