@@ -98,7 +98,7 @@ export default function Dashboard() {
         {error && <div className="error">{error}</div>}
         
         <p className="credits">
-          {remaining} von 5 kostenlosen Anfragen heute verfügbar
+          {remaining} von 3 kostenlosen Anfragen heute verfügbar
         </p>
 
         {code && (

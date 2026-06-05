@@ -7,7 +7,7 @@ const redis = new Redis({
   token: process.env.KV_REST_API_TOKEN || "",
 });
 
-const FREE_LIMIT = 5;
+const FREE_LIMIT = 3;
 
 export async function POST(req: NextRequest) {
   const { userId } = await auth();
