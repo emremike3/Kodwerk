@@ -33,13 +33,13 @@ export async function POST() {
     }
 
     const sub = subscriptions.data[0] as any;
-    console.log("SUB DATA:", JSON.stringify(sub));
     
     await stripe.subscriptions.update(sub.id, {
       cancel_at_period_end: true,
     });
 
-    const endDate = new Date(sub.current_period_end * 1000).toLocaleDateString("de-DE");
+    const endTimestamp = sub.items?.data?.[0]?.current_period_end || sub.cancel_at;
+    const endDate = new Date(endTimestamp * 1000).toLocaleDateString("de-DE");
     await redis.set(`cancelled:${userId}`, endDate);
 
     return NextResponse.json({ success: true, endDate });
