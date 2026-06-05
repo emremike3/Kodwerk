@@ -91,6 +91,8 @@ export default function Home() {
         .plan-btn-outline { background:transparent; border:0.5px solid var(--border); color:var(--white); }
         .plan-btn-filled { background:var(--orange); border:none; color:var(--white); }
         .plan-btn-filled:hover { background:var(--orange-light); }
+        .plan-btn-purple { background:#7C3AED; border:none; color:var(--white); }
+        .plan-btn-purple:hover { background:#6D28D9; }
         footer { border-top:0.5px solid var(--border); padding:2rem 2.5rem; display:flex; align-items:center; justify-content:space-between; max-width:900px; margin:0 auto; }
         footer p { font-size:0.8rem; color:var(--gray); }
       `}</style>
@@ -225,7 +227,8 @@ export default function Home() {
             </ul>
             <a href="/sign-in"><button className="plan-btn plan-btn-filled">Pro werden</button></a>
           </div>
-          <div className="pricing-card">
+          <div className="pricing-card" style={{borderColor: "#7C3AED"}}>
+            <div className="pricing-badge" style={{background: "#7C3AED"}}>PREMIUM</div>
             <div className="plan-name">Unlimited</div>
             <div className="plan-price">29€ <span>/ Monat</span></div>
             <div className="plan-desc">Für ernsthafte Entwickler</div>
@@ -235,7 +238,7 @@ export default function Home() {
               <li>Prioritäts-Support</li>
               <li>Früher Zugang zu Features</li>
             </ul>
-            <a href="/sign-in"><button className="plan-btn plan-btn-outline">Unlimited werden</button></a>
+            <a href="/sign-in"><button className="plan-btn plan-btn-purple">Unlimited werden</button></a>
           </div>
         </div>
       </section>
