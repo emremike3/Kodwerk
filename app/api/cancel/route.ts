@@ -32,10 +32,16 @@ export async function POST() {
       return NextResponse.json({ error: "Kein aktives Abo" }, { status: 400 });
     }
 
-    await stripe.subscriptions.cancel(subscriptions.data[0].id);
-    await redis.del(`plan:${userId}`);
+    const sub = subscriptions.data[0] as unknown as { id: string; current_period_end: number };
+    
+    await stripe.subscriptions.update(sub.id, {
+      cancel_at_period_end: true,
+    });
 
-    return NextResponse.json({ success: true });
+    const endDate = new Date(sub.current_period_end * 1000).toLocaleDateString("de-DE");
+    await redis.set(`cancelled:${userId}`, endDate);
+
+    return NextResponse.json({ success: true, endDate });
   } catch (err) {
     console.error(err);
     return NextResponse.json({ error: "Fehler beim Kündigen" }, { status: 500 });

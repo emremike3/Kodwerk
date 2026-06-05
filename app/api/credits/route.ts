@@ -20,6 +20,7 @@ export async function GET() {
   }
 
   const plan = await redis.get<string>(`plan:${userId}`);
+  const cancelledDate = await redis.get<string>(`cancelled:${userId}`);
   let renewalDate = null;
 
   if (plan === "pro" || plan === "unlimited") {
@@ -42,18 +43,18 @@ export async function GET() {
   }
 
   if (plan === "unlimited") {
-    return NextResponse.json({ remaining: -1, plan: "unlimited", renewalDate });
+    return NextResponse.json({ remaining: -1, plan: "unlimited", renewalDate, cancelledDate });
   }
 
   if (plan === "pro") {
     const month = new Date().toISOString().substring(0, 7);
     const key = `credits:${userId}:${month}`;
     const used = (await redis.get<number>(key)) || 0;
-    return NextResponse.json({ remaining: PRO_LIMIT - used, plan: "pro", renewalDate });
+    return NextResponse.json({ remaining: PRO_LIMIT - used, plan: "pro", renewalDate, cancelledDate });
   }
 
   const today = new Date().toISOString().split("T")[0];
   const key = `credits:${userId}:${today}`;
   const used = (await redis.get<number>(key)) || 0;
-  return NextResponse.json({ remaining: FREE_LIMIT - used, plan: "free", renewalDate: null });
+  return NextResponse.json({ remaining: FREE_LIMIT - used, plan: "free", renewalDate: null, cancelledDate: null });
 }
