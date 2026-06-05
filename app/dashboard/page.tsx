@@ -7,13 +7,17 @@ export default function Dashboard() {
   const [code, setCode] = useState("");
   const [loading, setLoading] = useState(false);
   const [remaining, setRemaining] = useState<number>(3);
+  const [plan, setPlan] = useState("free");
   const [error, setError] = useState("");
   const [checkoutLoading, setCheckoutLoading] = useState("");
 
   useEffect(() => {
     fetch("/api/credits")
       .then(res => res.json())
-      .then(data => setRemaining(data.remaining));
+      .then(data => {
+        setRemaining(data.remaining);
+        setPlan(data.plan);
+      });
   }, []);
 
   async function generateCode() {
@@ -35,6 +39,7 @@ export default function Dashboard() {
       } else {
         setCode(data.code);
         setRemaining(data.remaining);
+        setPlan(data.plan);
       }
     } catch (err) {
       console.error("fehler", err);
@@ -59,6 +64,18 @@ export default function Dashboard() {
       console.error("checkout fehler", err);
     }
     setCheckoutLoading("");
+  }
+
+  function getCreditsText() {
+    if (plan === "unlimited") return "Unbegrenzte Anfragen verfügbar ∞";
+    if (plan === "pro") return `${remaining} von 1.000 Pro Anfragen diesen Monat verfügbar`;
+    return `${remaining} von 3 kostenlosen Anfragen heute verfügbar`;
+  }
+
+  function getPlanBadge() {
+    if (plan === "unlimited") return <span style={{background:"#7C3AED", color:"white", padding:"0.2rem 0.6rem", borderRadius:"100px", fontSize:"0.75rem", fontWeight:600}}>UNLIMITED</span>;
+    if (plan === "pro") return <span style={{background:"#E8500A", color:"white", padding:"0.2rem 0.6rem", borderRadius:"100px", fontSize:"0.75rem", fontWeight:600}}>PRO</span>;
+    return null;
   }
 
   return (
@@ -103,6 +120,7 @@ export default function Dashboard() {
       <div className="topbar">
         <a href="/" className="logo">Kod<span>werk</span></a>
         <div style={{display:"flex", alignItems:"center", gap:"1rem"}}>
+          {getPlanBadge()}
           <a href="/dashboard/token" className="plugin-link">🔌 Plugin verbinden</a>
           <UserButton />
         </div>
@@ -118,29 +136,42 @@ export default function Dashboard() {
             onChange={(e) => setPrompt(e.target.value)}
           />
         </div>
-        <button className="send-btn" onClick={generateCode} disabled={loading || remaining === 0}>
+        <button className="send-btn" onClick={generateCode} disabled={loading || (plan === "free" && remaining === 0)}>
           {loading ? "Generiert..." : "Code generieren ⚡"}
         </button>
         
         {error && <div className="error">{error}</div>}
         
-        <p className="credits">
-          {remaining} von 3 kostenlosen Anfragen heute verfügbar
-        </p>
+        <p className="credits">{getCreditsText()}</p>
 
-        <div className="upgrade-box">
-          <div className="upgrade-text">
-            <strong>Mehr Anfragen?</strong> Upgrade auf Pro oder Unlimited!
+        {plan === "free" && (
+          <div className="upgrade-box">
+            <div className="upgrade-text">
+              <strong>Mehr Anfragen?</strong> Upgrade auf Pro oder Unlimited!
+            </div>
+            <div className="upgrade-btns">
+              <button className="btn-pro" onClick={() => checkout("pro")} disabled={checkoutLoading === "pro"}>
+                {checkoutLoading === "pro" ? "Lädt..." : "Pro — 12€/Monat"}
+              </button>
+              <button className="btn-unlimited" onClick={() => checkout("unlimited")} disabled={checkoutLoading === "unlimited"}>
+                {checkoutLoading === "unlimited" ? "Lädt..." : "Unlimited — 29€/Monat"}
+              </button>
+            </div>
           </div>
-          <div className="upgrade-btns">
-            <button className="btn-pro" onClick={() => checkout("pro")} disabled={checkoutLoading === "pro"}>
-              {checkoutLoading === "pro" ? "Lädt..." : "Pro — 12€/Monat"}
-            </button>
-            <button className="btn-unlimited" onClick={() => checkout("unlimited")} disabled={checkoutLoading === "unlimited"}>
-              {checkoutLoading === "unlimited" ? "Lädt..." : "Unlimited — 29€/Monat"}
-            </button>
+        )}
+
+        {plan === "pro" && (
+          <div className="upgrade-box">
+            <div className="upgrade-text">
+              <strong>Willst du noch mehr?</strong> Upgrade auf Unlimited!
+            </div>
+            <div className="upgrade-btns">
+              <button className="btn-unlimited" onClick={() => checkout("unlimited")} disabled={checkoutLoading === "unlimited"}>
+                {checkoutLoading === "unlimited" ? "Lädt..." : "Unlimited — 29€/Monat"}
+              </button>
+            </div>
           </div>
-        </div>
+        )}
 
         {code && (
           <div className="code-output">
