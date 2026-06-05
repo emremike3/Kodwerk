@@ -25,7 +25,6 @@ export default function Dashboard() {
   const [remaining, setRemaining] = useState<number>(3);
   const [plan, setPlan] = useState("free");
   const [checkoutLoading, setCheckoutLoading] = useState("");
-  const [sidebarOpen, setSidebarOpen] = useState(true);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
@@ -62,7 +61,7 @@ export default function Dashboard() {
   function createNewProject() {
     const newProject: Project = {
       id: Date.now().toString(),
-      name: `Projekt ${projects.length + 1}`,
+      name: `Neues Projekt`,
       messages: [],
       createdAt: Date.now(),
     };
@@ -82,7 +81,11 @@ export default function Dashboard() {
 
   function updateProjectMessages(projectId: string, newMessages: Message[]) {
     const updated = projects.map(p => 
-      p.id === projectId ? { ...p, messages: newMessages, name: newMessages[0]?.content.slice(0, 30) || p.name } : p
+      p.id === projectId ? { 
+        ...p, 
+        messages: newMessages, 
+        name: newMessages.find(m => m.role === "user")?.content.slice(0, 30) || p.name 
+      } : p
     );
     saveProjects(updated);
   }
@@ -96,9 +99,12 @@ export default function Dashboard() {
     setPrompt("");
     setLoading(true);
 
+    if (textareaRef.current) {
+      textareaRef.current.style.height = "auto";
+    }
+
     const assistantMessage: Message = { role: "assistant", content: "", isStreaming: true };
-    const messagesWithAssistant = [...newMessages, assistantMessage];
-    setMessages(messagesWithAssistant);
+    setMessages([...newMessages, assistantMessage]);
 
     try {
       const history = messages.map(m => ({
@@ -113,7 +119,7 @@ export default function Dashboard() {
       });
 
       if (res.status === 429) {
-        const errorMsg: Message = { role: "assistant", content: "❌ Tageslimit erreicht! Upgrade auf Pro für mehr Anfragen." };
+        const errorMsg: Message = { role: "assistant", content: "❌ Tageslimit erreicht! Upgrade auf Pro für mehr Anfragen.", isStreaming: false };
         const final = [...newMessages, errorMsg];
         setMessages(final);
         if (activeProjectId) updateProjectMessages(activeProjectId, final);
@@ -157,7 +163,7 @@ export default function Dashboard() {
 
       const finalMessages = [...newMessages, { 
         role: "assistant" as const, 
-        content: fullContent, 
+        content: fullContent.split("<kodwerk>")[0].trim(),
         code: finalCode,
         isStreaming: false 
       }];
@@ -205,8 +211,6 @@ export default function Dashboard() {
       sendMessage();
     }
   }
-
-  const activeProject = projects.find(p => p.id === activeProjectId);
 
   return (
     <div style={{
@@ -262,9 +266,9 @@ export default function Dashboard() {
         .message.user .message-content { display:flex; justify-content:flex-end; }
         .user-bubble { background:rgba(255,255,255,0.08); padding:0.75rem 1rem; border-radius:12px 12px 2px 12px; font-size:0.9rem; line-height:1.6; max-width:80%; }
         .ai-text { font-size:0.9rem; line-height:1.7; color:#D4D0C8; }
-        .ai-text pre { background:rgba(0,0,0,0.4); border-radius:8px; padding:1rem; font-family:'Courier New',monospace; font-size:0.78rem; line-height:1.7; color:#A8C7A0; overflow-x:auto; margin-top:0.75rem; border:0.5px solid var(--border); }
+        .ai-text pre { background:rgba(0,0,0,0.4); border-radius:8px; padding:1rem; font-family:'Courier New',monospace; font-size:0.78rem; line-height:1.7; color:#A8C7A0; overflow-x:auto; margin-top:0.75rem; border:0.5px solid var(--border); white-space:pre-wrap; word-break:break-word; }
         
-        .thinking { display:flex; align-items:center; gap:0.5rem; color:var(--gray); font-size:0.85rem; }
+        .thinking { display:flex; align-items:center; gap:0.5rem; color:var(--gray); font-size:0.85rem; margin-top:0.25rem; }
         .thinking-dots { display:flex; gap:3px; }
         .thinking-dot { width:5px; height:5px; border-radius:50%; background:var(--orange); animation:bounce 1.2s infinite; }
         .thinking-dot:nth-child(2) { animation-delay:0.2s; }
@@ -275,7 +279,7 @@ export default function Dashboard() {
         .empty-title { font-family:'Syne',sans-serif; font-size:1.5rem; font-weight:700; margin-bottom:0.5rem; }
         .empty-sub { color:var(--gray); font-size:0.9rem; margin-bottom:2rem; }
         .suggestions { display:grid; grid-template-columns:1fr 1fr; gap:0.75rem; max-width:500px; }
-        .suggestion { background:var(--card-bg); border:0.5px solid var(--border); border-radius:10px; padding:0.75rem 1rem; font-size:0.85rem; color:var(--gray); cursor:pointer; text-align:left; transition:all 0.2s; }
+        .suggestion { background:var(--card-bg); border:0.5px solid var(--border); border-radius:10px; padding:0.75rem 1rem; font-size:0.85rem; color:var(--gray); cursor:pointer; text-align:left; transition:all 0.2s; font-family:'DM Sans',sans-serif; }
         .suggestion:hover { border-color:rgba(232,80,10,0.3); color:#F5F2ED; }
 
         .input-area { padding:1rem 2rem 1.5rem; flex-shrink:0; max-width:800px; margin:0 auto; width:100%; }
@@ -288,7 +292,6 @@ export default function Dashboard() {
         .input-hint { font-size:0.72rem; color:var(--gray); margin-top:0.5rem; text-align:center; }
       `}</style>
 
-      {/* Topbar */}
       <div className="topbar">
         <a href="/" className="logo">Kod<span>werk</span></a>
         <div className="topbar-right">
@@ -301,7 +304,6 @@ export default function Dashboard() {
       </div>
 
       <div className="body">
-        {/* Sidebar */}
         <div className="sidebar">
           <div className="sidebar-header">
             <button className="new-project-btn" onClick={createNewProject}>
@@ -332,7 +334,6 @@ export default function Dashboard() {
           )}
         </div>
 
-        {/* Chat Area */}
         <div className="chat-area">
           {messages.length === 0 ? (
             <div className="empty-state">
@@ -363,21 +364,34 @@ export default function Dashboard() {
                       <div className="user-bubble">{msg.content}</div>
                     ) : (
                       <div className="ai-text">
-                        {msg.isStreaming && msg.content === "" ? (
-                          <div className="thinking">
-                            <div className="thinking-dots">
-                              <div className="thinking-dot"></div>
-                              <div className="thinking-dot"></div>
-                              <div className="thinking-dot"></div>
-                            </div>
-                            Kodwerk denkt nach...
-                          </div>
+                        {msg.isStreaming ? (
+                          <>
+                            {msg.content === "" ? (
+                              <div className="thinking">
+                                <div className="thinking-dots">
+                                  <div className="thinking-dot"></div>
+                                  <div className="thinking-dot"></div>
+                                  <div className="thinking-dot"></div>
+                                </div>
+                                Kodwerk denkt nach...
+                              </div>
+                            ) : (
+                              <>
+                                {msg.content.split("<kodwerk>")[0]}
+                                <div className="thinking">
+                                  <div className="thinking-dots">
+                                    <div className="thinking-dot"></div>
+                                    <div className="thinking-dot"></div>
+                                    <div className="thinking-dot"></div>
+                                  </div>
+                                </div>
+                              </>
+                            )}
+                          </>
                         ) : (
                           <>
-                            {msg.content.split("<kodwerk>")[0]}
-                            {msg.code && (
-                              <pre>{msg.code}</pre>
-                            )}
+                            {msg.content}
+                            {msg.code && <pre>{msg.code}</pre>}
                           </>
                         )}
                       </div>
@@ -389,7 +403,6 @@ export default function Dashboard() {
             </div>
           )}
 
-          {/* Input */}
           <div className="input-area">
             <div className="input-wrapper">
               <textarea
