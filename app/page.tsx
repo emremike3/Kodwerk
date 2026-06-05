@@ -75,8 +75,8 @@ export default function Home() {
         .feature-icon { width:38px; height:38px; background:rgba(232,80,10,0.12); border-radius:8px; display:flex; align-items:center; justify-content:center; margin-bottom:1rem; font-size:18px; }
         .feature-title { font-family:'Syne',sans-serif; font-size:1rem; font-weight:700; margin-bottom:0.5rem; }
         .feature-desc { font-size:0.875rem; color:var(--gray); line-height:1.6; }
-        .pricing { max-width:700px; margin:0 auto 6rem; padding:0 2.5rem; }
-        .pricing-grid { display:grid; grid-template-columns:1fr 1fr; gap:1rem; margin-top:3rem; }
+        .pricing { max-width:1000px; margin:0 auto 6rem; padding:0 2.5rem; }
+        .pricing-grid { display:grid; grid-template-columns:1fr 1fr 1fr; gap:1rem; margin-top:3rem; }
         .pricing-card { background:var(--card-bg); border:0.5px solid var(--border); border-radius:14px; padding:2rem; position:relative; }
         .pricing-card.featured { border-color:var(--orange); }
         .pricing-badge { position:absolute; top:-12px; left:50%; transform:translateX(-50%); background:var(--orange); color:var(--white); font-size:0.7rem; font-weight:500; padding:0.25rem 0.75rem; border-radius:100px; white-space:nowrap; }
@@ -205,7 +205,7 @@ export default function Home() {
             <div className="plan-price">0€ <span>/ Monat</span></div>
             <div className="plan-desc">Perfekt zum Ausprobieren</div>
             <ul className="plan-features">
-              <li>5 Anfragen pro Tag</li>
+              <li>3 Anfragen pro Tag</li>
               <li>Auto-Sync mit Studio</li>
               <li>Deutsche Oberfläche</li>
               <li>Community Support</li>
@@ -215,15 +215,27 @@ export default function Home() {
           <div className="pricing-card featured">
             <div className="pricing-badge">BELIEBT</div>
             <div className="plan-name">Pro</div>
-            <div className="plan-price">9€ <span>/ Monat</span></div>
-            <div className="plan-desc">Für ernsthafte Entwickler</div>
+            <div className="plan-price">12€ <span>/ Monat</span></div>
+            <div className="plan-desc">Für aktive Entwickler</div>
             <ul className="plan-features">
-              <li>100 Anfragen pro Monat</li>
-              <li>Playtest-Agent (Beta)</li>
+              <li>1.000 Anfragen pro Monat</li>
+              <li>Auto-Sync mit Studio</li>
               <li>Prioritäts-Support</li>
               <li>Früher Zugang zu Features</li>
             </ul>
             <a href="/sign-in"><button className="plan-btn plan-btn-filled">Pro werden</button></a>
+          </div>
+          <div className="pricing-card">
+            <div className="plan-name">Unlimited</div>
+            <div className="plan-price">29€ <span>/ Monat</span></div>
+            <div className="plan-desc">Für ernsthafte Entwickler</div>
+            <ul className="plan-features">
+              <li>Unbegrenzte Anfragen</li>
+              <li>Auto-Sync mit Studio</li>
+              <li>Prioritäts-Support</li>
+              <li>Früher Zugang zu Features</li>
+            </ul>
+            <a href="/sign-in"><button className="plan-btn plan-btn-outline">Unlimited werden</button></a>
           </div>
         </div>
       </section>
