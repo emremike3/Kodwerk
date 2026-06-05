@@ -33,6 +33,7 @@ export async function POST() {
     }
 
     const sub = subscriptions.data[0] as any;
+    console.log("SUB DATA:", JSON.stringify(sub));
     
     await stripe.subscriptions.update(sub.id, {
       cancel_at_period_end: true,
