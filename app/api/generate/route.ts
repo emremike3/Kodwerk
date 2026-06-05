@@ -55,7 +55,7 @@ export async function POST(req: NextRequest) {
     messages: [
       {
         role: "user",
-        content: `Du bist ein erfahrener Roblox Studio Entwickler. Generiere funktionierenden Luau Code.
+        content: `Du bist ein erfahrener Roblox Studio Entwickler. Generiere funktionierenden Luau Code für Roblox.
 
 Antworte NUR mit JSON (kein Markdown, keine Erklärungen):
 {"code": "...", "scriptType": "LocalScript", "location": "StarterPlayerScripts", "name": "ScriptName"}
@@ -68,11 +68,15 @@ ORTE REGELN:
 - Shared Funktionen → ReplicatedStorage (ModuleScript)
 
 WICHTIGE ROBLOX REGELN:
-- Für RootPart Velocity: rootPart.AssemblyLinearVelocity benutzen
+- NIEMALS BodyVelocity, BodyGyro, BodyPosition, BodyAngularVelocity benutzen - diese sind DEPRECATED!
+- Für Bewegung/Fliegen: humanoid.PlatformStand = true + rootPart.AssemblyLinearVelocity
+- Für Velocity: rootPart.AssemblyLinearVelocity statt rootPart.Velocity
 - IMMER game:GetService() benutzen
 - IMMER WaitForChild() benutzen
 - Character: player.Character or player.CharacterAdded:Wait()
-- Vollständiger funktionierender Code ohne TODOs
+- RunService.Heartbeat statt RenderStepped für Bewegungslogik im LocalScript
+- Vollständiger funktionierender Code ohne TODOs oder Platzhalter
+- Keine deprecated APIs verwenden
 
 Aufgabe: ${prompt}`
       }
