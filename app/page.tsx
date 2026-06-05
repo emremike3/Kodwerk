@@ -1,8 +1,18 @@
 "use client";
 import { useUser, UserButton } from "@clerk/nextjs";
+import { useState, useEffect } from "react";
 
 export default function Home() {
   const { isSignedIn } = useUser();
+  const [currentPlan, setCurrentPlan] = useState("free");
+
+  useEffect(() => {
+    if (isSignedIn) {
+      fetch("/api/credits")
+        .then(res => res.json())
+        .then(data => setCurrentPlan(data.plan));
+    }
+  }, [isSignedIn]);
 
   async function checkout(plan: string) {
     if (!isSignedIn) {
@@ -109,6 +119,7 @@ export default function Home() {
         .plan-btn-filled:hover { background:var(--orange-light); }
         .plan-btn-purple { background:#7C3AED; color:var(--white); }
         .plan-btn-purple:hover { background:#6D28D9; }
+        .plan-btn-current { background:rgba(255,255,255,0.08); color:var(--gray); cursor:default; }
         footer { border-top:0.5px solid var(--border); padding:2rem 2.5rem; display:flex; align-items:center; justify-content:space-between; max-width:900px; margin:0 auto; }
         footer p { font-size:0.8rem; color:var(--gray); }
       `}</style>
@@ -228,8 +239,11 @@ export default function Home() {
               <li>Deutsche Oberfläche</li>
               <li>Community Support</li>
             </ul>
-            <button className="plan-btn plan-btn-outline" onClick={() => window.location.href = isSignedIn ? "/dashboard" : "/sign-in"}>
-              {isSignedIn ? "Zum Dashboard" : "Kostenlos starten"}
+            <button 
+              className={`plan-btn ${currentPlan === "free" ? "plan-btn-current" : "plan-btn-outline"}`}
+              onClick={() => window.location.href = isSignedIn ? "/dashboard" : "/sign-in"}
+            >
+              {currentPlan === "free" && isSignedIn ? "Aktueller Plan ✓" : isSignedIn ? "Zum Dashboard" : "Kostenlos starten"}
             </button>
           </div>
           <div className="pricing-card featured">
@@ -243,8 +257,11 @@ export default function Home() {
               <li>Prioritäts-Support</li>
               <li>Früher Zugang zu Features</li>
             </ul>
-            <button className="plan-btn plan-btn-filled" onClick={() => checkout("pro")}>
-              Pro werden
+            <button 
+              className={`plan-btn ${currentPlan === "pro" ? "plan-btn-current" : "plan-btn-filled"}`}
+              onClick={() => currentPlan === "pro" ? window.location.href = "/dashboard" : checkout("pro")}
+            >
+              {currentPlan === "pro" ? "Aktueller Plan ✓" : "Pro werden"}
             </button>
           </div>
           <div className="pricing-card" style={{borderColor: "#7C3AED"}}>
@@ -258,8 +275,11 @@ export default function Home() {
               <li>Prioritäts-Support</li>
               <li>Früher Zugang zu Features</li>
             </ul>
-            <button className="plan-btn plan-btn-purple" onClick={() => checkout("unlimited")}>
-              Unlimited werden
+            <button 
+              className={`plan-btn ${currentPlan === "unlimited" ? "plan-btn-current" : "plan-btn-purple"}`}
+              onClick={() => currentPlan === "unlimited" ? window.location.href = "/dashboard" : checkout("unlimited")}
+            >
+              {currentPlan === "unlimited" ? "Aktueller Plan ✓" : "Unlimited werden"}
             </button>
           </div>
         </div>
