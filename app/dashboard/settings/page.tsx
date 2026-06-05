@@ -7,7 +7,7 @@ export default function SettingsPage() {
   const [cancelledDate, setCancelledDate] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [cancelLoading, setCancelLoading] = useState(false);
-  const [cancelled, setCancelled] = useState(false);
+  const [showModal, setShowModal] = useState(false);
 
   useEffect(() => {
     fetch("/api/credits")
@@ -21,14 +21,13 @@ export default function SettingsPage() {
   }, []);
 
   async function cancelSubscription() {
-    if (!confirm("Bist du sicher dass du dein Abo kündigen möchtest?")) return;
     setCancelLoading(true);
     try {
       const res = await fetch("/api/cancel", { method: "POST" });
       const data = await res.json();
       if (data.success) {
-        setCancelled(true);
         setCancelledDate(data.endDate);
+        setShowModal(false);
       }
     } catch (err) {
       console.error(err);
@@ -75,7 +74,34 @@ export default function SettingsPage() {
         .cancel-btn:disabled { opacity:0.5; cursor:not-allowed; }
         .back-link { color:var(--gray); text-decoration:none; font-size:0.9rem; display:inline-block; margin-top:1.5rem; }
         .back-link:hover { color:#F5F2ED; }
+        .modal-overlay { position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(0,0,0,0.7); display:flex; align-items:center; justify-content:center; z-index:1000; }
+        .modal { background:#1A1A18; border:0.5px solid rgba(255,255,255,0.12); border-radius:16px; padding:2rem; max-width:400px; width:90%; }
+        .modal-title { font-family:'Syne',sans-serif; font-size:1.3rem; font-weight:700; margin-bottom:0.75rem; }
+        .modal-text { color:var(--gray); font-size:0.9rem; line-height:1.6; margin-bottom:1.5rem; }
+        .modal-btns { display:flex; gap:0.75rem; }
+        .modal-cancel { flex:1; background:transparent; border:0.5px solid var(--border); color:#F5F2ED; padding:0.75rem; border-radius:8px; font-family:'DM Sans',sans-serif; font-size:0.9rem; cursor:pointer; }
+        .modal-confirm { flex:1; background:#FF5F57; border:none; color:white; padding:0.75rem; border-radius:8px; font-family:'DM Sans',sans-serif; font-size:0.9rem; font-weight:500; cursor:pointer; }
+        .modal-confirm:disabled { opacity:0.5; cursor:not-allowed; }
       `}</style>
+
+      {showModal && (
+        <div className="modal-overlay" onClick={() => setShowModal(false)}>
+          <div className="modal" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-title">Abo kündigen?</div>
+            <p className="modal-text">
+              Bist du sicher dass du dein Abo kündigen möchtest? Du behältst deinen Zugang bis zum Ende der aktuellen Abrechnungsperiode.
+            </p>
+            <div className="modal-btns">
+              <button className="modal-cancel" onClick={() => setShowModal(false)}>
+                Abbrechen
+              </button>
+              <button className="modal-confirm" onClick={cancelSubscription} disabled={cancelLoading}>
+                {cancelLoading ? "Wird gekündigt..." : "Ja, kündigen"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       <div className="topbar">
         <a href="/" className="logo">Kod<span>werk</span></a>
@@ -94,29 +120,25 @@ export default function SettingsPage() {
                 {getPlanName()}
               </div>
 
-              {(cancelledDate || cancelled) && (
+              {cancelledDate && (
                 <div className="cancelled-info">
                   ⚠️ Dein Abo wurde gekündigt. Du hast bis zum <strong>{cancelledDate}</strong> noch Zugriff.
                 </div>
               )}
 
-              {renewalDate && plan !== "free" && !cancelledDate && !cancelled && (
+              {renewalDate && plan !== "free" && !cancelledDate && (
                 <div className="renewal-info">
                   Nächste Verlängerung: <strong>{renewalDate}</strong>
                 </div>
               )}
               
-              {plan !== "free" && !cancelledDate && !cancelled && (
+              {plan !== "free" && !cancelledDate && (
                 <>
                   <p style={{fontSize: "0.85rem", color: "#6B6860", marginBottom: "0.5rem"}}>
                     Dein Abo verlängert sich automatisch monatlich und kann jederzeit gekündigt werden.
                   </p>
-                  <button 
-                    className="cancel-btn" 
-                    onClick={cancelSubscription}
-                    disabled={cancelLoading}
-                  >
-                    {cancelLoading ? "Wird gekündigt..." : "Abo kündigen"}
+                  <button className="cancel-btn" onClick={() => setShowModal(true)}>
+                    Abo kündigen
                   </button>
                 </>
               )}
