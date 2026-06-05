@@ -32,7 +32,7 @@ export async function POST() {
       return NextResponse.json({ error: "Kein aktives Abo" }, { status: 400 });
     }
 
-    const sub = subscriptions.data[0] as unknown as { id: string; current_period_end: number };
+    const sub = subscriptions.data[0] as any;
     
     await stripe.subscriptions.update(sub.id, {
       cancel_at_period_end: true,
