@@ -4,6 +4,22 @@ import { useUser, UserButton } from "@clerk/nextjs";
 export default function Home() {
   const { isSignedIn } = useUser();
 
+  async function checkout(plan: string) {
+    if (!isSignedIn) {
+      window.location.href = "/sign-in";
+      return;
+    }
+    const res = await fetch("/api/checkout", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ plan }),
+    });
+    const data = await res.json();
+    if (data.url) {
+      window.location.href = data.url;
+    }
+  }
+
   return (
     <main style={{
       fontFamily: "'DM Sans', sans-serif",
@@ -87,11 +103,11 @@ export default function Home() {
         .plan-features { list-style:none; display:flex; flex-direction:column; gap:0.65rem; margin-bottom:1.5rem; }
         .plan-features li { font-size:0.85rem; color:var(--gray); display:flex; align-items:center; gap:8px; }
         .plan-features li::before { content:'✓'; color:var(--orange); font-weight:700; font-size:0.8rem; }
-        .plan-btn { width:100%; padding:0.75rem; border-radius:8px; font-family:'DM Sans',sans-serif; font-size:0.9rem; font-weight:500; cursor:pointer; transition:all 0.2s; }
+        .plan-btn { width:100%; padding:0.75rem; border-radius:8px; font-family:'DM Sans',sans-serif; font-size:0.9rem; font-weight:500; cursor:pointer; transition:all 0.2s; border:none; }
         .plan-btn-outline { background:transparent; border:0.5px solid var(--border); color:var(--white); }
-        .plan-btn-filled { background:var(--orange); border:none; color:var(--white); }
+        .plan-btn-filled { background:var(--orange); color:var(--white); }
         .plan-btn-filled:hover { background:var(--orange-light); }
-        .plan-btn-purple { background:#7C3AED; border:none; color:var(--white); }
+        .plan-btn-purple { background:#7C3AED; color:var(--white); }
         .plan-btn-purple:hover { background:#6D28D9; }
         footer { border-top:0.5px solid var(--border); padding:2rem 2.5rem; display:flex; align-items:center; justify-content:space-between; max-width:900px; margin:0 auto; }
         footer p { font-size:0.8rem; color:var(--gray); }
@@ -212,7 +228,9 @@ export default function Home() {
               <li>Deutsche Oberfläche</li>
               <li>Community Support</li>
             </ul>
-            <a href="/sign-in"><button className="plan-btn plan-btn-outline">Kostenlos starten</button></a>
+            <button className="plan-btn plan-btn-outline" onClick={() => window.location.href = isSignedIn ? "/dashboard" : "/sign-in"}>
+              {isSignedIn ? "Zum Dashboard" : "Kostenlos starten"}
+            </button>
           </div>
           <div className="pricing-card featured">
             <div className="pricing-badge">BELIEBT</div>
@@ -225,7 +243,9 @@ export default function Home() {
               <li>Prioritäts-Support</li>
               <li>Früher Zugang zu Features</li>
             </ul>
-            <a href="/sign-in"><button className="plan-btn plan-btn-filled">Pro werden</button></a>
+            <button className="plan-btn plan-btn-filled" onClick={() => checkout("pro")}>
+              Pro werden
+            </button>
           </div>
           <div className="pricing-card" style={{borderColor: "#7C3AED"}}>
             <div className="pricing-badge" style={{background: "#7C3AED"}}>PREMIUM</div>
@@ -238,7 +258,9 @@ export default function Home() {
               <li>Prioritäts-Support</li>
               <li>Früher Zugang zu Features</li>
             </ul>
-            <a href="/sign-in"><button className="plan-btn plan-btn-purple">Unlimited werden</button></a>
+            <button className="plan-btn plan-btn-purple" onClick={() => checkout("unlimited")}>
+              Unlimited werden
+            </button>
           </div>
         </div>
       </section>
