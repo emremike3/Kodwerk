@@ -1,10 +1,15 @@
 import { auth } from "@clerk/nextjs/server";
 import { NextRequest, NextResponse } from "next/server";
 import { Redis } from "@upstash/redis";
+import Anthropic from "@anthropic-ai/sdk";
 
 const redis = new Redis({
   url: process.env.KV_REST_API_URL || "",
   token: process.env.KV_REST_API_TOKEN || "",
+});
+
+const anthropic = new Anthropic({
+  apiKey: process.env.ANTHROPIC_API_KEY,
 });
 
 const FREE_LIMIT = 3;
@@ -44,72 +49,37 @@ export async function POST(req: NextRequest) {
 
   const { prompt } = await req.json();
 
-  const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      "Authorization": `Bearer ${process.env.GROQ_API_KEY}`,
-    },
-    body: JSON.stringify({
-      model: "deepseek-r1-distill-llama-70b",
-      messages: [
-        {
-          role: "system",
-          content: `Du bist ein erfahrener Roblox Studio Entwickler. Generiere IMMER funktionierenden Luau Code.
+  const message = await anthropic.messages.create({
+    model: "claude-sonnet-4-20250514",
+    max_tokens: 2048,
+    messages: [
+      {
+        role: "user",
+        content: `Du bist ein erfahrener Roblox Studio Entwickler. Generiere funktionierenden Luau Code.
 
-Antworte NUR mit JSON (kein Markdown):
+Antworte NUR mit JSON (kein Markdown, keine Erklärungen):
 {"code": "...", "scriptType": "LocalScript", "location": "StarterPlayerScripts", "name": "ScriptName"}
 
-ORTE:
-- Tastatur/Maus/Input/Bewegung/Springen/Fliegen → StarterPlayerScripts (LocalScript)
+ORTE REGELN:
+- Input/Bewegung/Springen/Fliegen/Dash → StarterPlayerScripts (LocalScript)
 - Charakter Aussehen/Animationen → StarterCharacterScripts (LocalScript)
-- GUI/Buttons/Menus → StarterGui (LocalScript)
-- Spawning/DataStore/Server Logik → ServerScriptService (Script)
+- GUI/Buttons/Menus/HUD → StarterGui (LocalScript)
+- Spawning/DataStore/Server Logik/Münzen → ServerScriptService (Script)
 - Shared Funktionen → ReplicatedStorage (ModuleScript)
 
 WICHTIGE ROBLOX REGELN:
-- NIEMALS direkt auf Character zugreifen ohne CharacterAdded:Wait()
-- Für RootPart: local rootPart = character:WaitForChild("HumanoidRootPart")
-- Für Velocity: rootPart.AssemblyLinearVelocity statt rootPart.Velocity
+- Für RootPart Velocity: rootPart.AssemblyLinearVelocity benutzen
 - IMMER game:GetService() benutzen
 - IMMER WaitForChild() benutzen
+- Character: player.Character or player.CharacterAdded:Wait()
+- Vollständiger funktionierender Code ohne TODOs
 
-BEISPIEL Doppelsprung:
-local UIS = game:GetService("UserInputService")
-local Players = game:GetService("Players")
-local player = Players.LocalPlayer
-local character = player.Character or player.CharacterAdded:Wait()
-local humanoid = character:WaitForChild("Humanoid")
-local rootPart = character:WaitForChild("HumanoidRootPart")
-local canDoubleJump = false
-local hasDoubleJumped = false
-humanoid.StateChanged:Connect(function(_, new)
-    if new == Enum.HumanoidStateType.Freefall then
-        canDoubleJump = true
-        hasDoubleJumped = false
-    elseif new == Enum.HumanoidStateType.Landed then
-        canDoubleJump = false
-        hasDoubleJumped = false
-    end
-end)
-UIS.InputBegan:Connect(function(input, processed)
-    if processed then return end
-    if input.KeyCode == Enum.KeyCode.Space and canDoubleJump and not hasDoubleJumped then
-        hasDoubleJumped = true
-        rootPart.AssemblyLinearVelocity = Vector3.new(rootPart.AssemblyLinearVelocity.X, 50, rootPart.AssemblyLinearVelocity.Z)
-    end
-end)`
-        },
-        {
-          role: "user",
-          content: prompt
-        }
-      ],
-    }),
+Aufgabe: ${prompt}`
+      }
+    ],
   });
 
-  const data = await response.json();
-  const raw = data.choices?.[0]?.message?.content || "{}";
+  const raw = message.content[0].type === "text" ? message.content[0].text : "{}";
 
   let parsed = { code: "", scriptType: "LocalScript", location: "StarterPlayerScripts", name: "KodwerkScript" };
   try {
