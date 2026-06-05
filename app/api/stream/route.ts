@@ -19,17 +19,25 @@ const SYSTEM_PROMPT = `Du bist ein erfahrener Roblox Studio Entwickler namens Ko
 
 Wenn du Code generierst, antworte in diesem Format:
 1. Kurze Erklärung was du machst (1-2 Sätze auf Deutsch)
-2. Dann den Code in einem JSON Block:
+2. Dann ALLE benötigten Scripts in einem JSON Block:
+
 <kodwerk>
-{"code": "...", "scriptType": "LocalScript", "location": "StarterPlayerScripts", "name": "ScriptName"}
+[
+  {"code": "...", "scriptType": "LocalScript", "location": "StarterGui", "name": "ShopGui"},
+  {"code": "...", "scriptType": "Script", "location": "ServerScriptService", "name": "ShopServer"},
+  {"code": "...", "scriptType": "ModuleScript", "location": "ReplicatedStorage", "name": "ShopModule"}
+]
 </kodwerk>
+
+WICHTIG: Gib IMMER ein Array zurück, auch wenn es nur ein Script ist!
 
 ORTE REGELN:
 - Input/Bewegung/Springen/Fliegen → StarterPlayerScripts (LocalScript)
 - Charakter Aussehen/Animationen → StarterCharacterScripts (LocalScript)
 - GUI/Buttons/Menus → StarterGui (LocalScript)
 - Spawning/Server Logik/Münzen → ServerScriptService (Script)
-- Shared Funktionen → ReplicatedStorage (ModuleScript)
+- Shared Funktionen/RemoteEvents → ReplicatedStorage (ModuleScript)
+- Systeme die Client UND Server brauchen → mehrere Scripts generieren!
 
 WICHTIGE ROBLOX REGELN:
 - NIEMALS BodyVelocity, BodyGyro benutzen - DEPRECATED!
@@ -37,6 +45,8 @@ WICHTIGE ROBLOX REGELN:
 - IMMER game:GetService() benutzen
 - IMMER WaitForChild() benutzen
 - Character: player.Character or player.CharacterAdded:Wait()
+- Für Shop/Coins/Items: RemoteEvents in ReplicatedStorage benutzen
+- Server Script verwaltet Coins und gibt Items, Client Script zeigt GUI
 - Vollständiger funktionierender Code ohne TODOs`;
 
 export async function POST(req: NextRequest) {
@@ -93,27 +103,29 @@ export async function POST(req: NextRequest) {
         }
       }
 
-      // Extract and save code
       const match = fullText.match(/<kodwerk>([\s\S]*?)<\/kodwerk>/);
       if (match) {
         try {
           const parsed = JSON.parse(match[1].trim());
-          parsed.code = parsed.code.replace(/\\n/g, "\n");
+          const scripts = Array.isArray(parsed) ? parsed : [parsed];
           
-          await redis.set(`pending:${userId}`, {
-            code: parsed.code,
-            name: parsed.name || "KodwerkScript",
-            scriptType: parsed.scriptType || "LocalScript",
-            location: parsed.location || "StarterPlayerScripts"
-          }, { ex: 300 });
+          const processedScripts = scripts.map((s: any) => ({
+            code: (s.code || "").replace(/\\n/g, "\n"),
+            name: s.name || "KodwerkScript",
+            scriptType: s.scriptType || "LocalScript",
+            location: s.location || "StarterPlayerScripts"
+          }));
+
+          await redis.set(`pending:${userId}`, processedScripts, { ex: 300 });
 
           if (key) {
             const used = (await redis.get<number>(key)) || 0;
             await redis.set(key, used + 1, { ex: plan === "pro" ? 2592000 : 86400 });
           }
 
-          controller.enqueue(encoder.encode(`data: ${JSON.stringify({ done: true, code: parsed.code })}\n\n`));
-        } catch {
+          controller.enqueue(encoder.encode(`data: ${JSON.stringify({ done: true, scripts: processedScripts })}\n\n`));
+        } catch (e) {
+          console.error("Parse error:", e);
           controller.enqueue(encoder.encode(`data: ${JSON.stringify({ done: true })}\n\n`));
         }
       } else {
