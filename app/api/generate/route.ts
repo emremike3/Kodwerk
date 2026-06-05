@@ -51,7 +51,7 @@ export async function POST(req: NextRequest) {
       "Authorization": `Bearer ${process.env.GROQ_API_KEY}`,
     },
     body: JSON.stringify({
-      model: "llama-3.3-70b-versatile",
+      model: "deepseek-r1-distill-llama-70b",
       messages: [
         {
           role: "system",
