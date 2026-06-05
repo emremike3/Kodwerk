@@ -29,11 +29,10 @@ export async function GET() {
       try {
         const subscriptions = await stripe.subscriptions.list({
           customer: customerId,
-          status: "active",
         });
         if (subscriptions.data.length > 0) {
-          const sub = subscriptions.data[0] as unknown as { current_period_end: number };
-          const renewalTimestamp = sub.current_period_end;
+          const sub = subscriptions.data[0] as any;
+          const renewalTimestamp = sub.items?.data?.[0]?.current_period_end || sub.cancel_at;
           renewalDate = new Date(renewalTimestamp * 1000).toLocaleDateString("de-DE");
         }
       } catch {
