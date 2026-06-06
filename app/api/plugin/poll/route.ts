@@ -23,9 +23,8 @@ export async function GET(req: NextRequest) {
   
   if (pending) {
     await redis.del(`pending:${userId}`);
-    
-    const scripts = Array.isArray(pending) ? pending : [pending];
-    return NextResponse.json({ scripts });
+    const items = Array.isArray(pending) ? pending : [pending];
+    return NextResponse.json({ scripts: items });
   }
 
   return NextResponse.json({ scripts: null });
