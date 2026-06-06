@@ -26,6 +26,8 @@ export default function Dashboard() {
   const [plan, setPlan] = useState("free");
   const [checkoutLoading, setCheckoutLoading] = useState("");
   const [projectsLoading, setProjectsLoading] = useState(true);
+  const [showErrorModal, setShowErrorModal] = useState(false);
+  const [errorText, setErrorText] = useState("");
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
@@ -36,7 +38,6 @@ export default function Dashboard() {
         setRemaining(data.remaining);
         setPlan(data.plan);
       });
-
     loadProjects();
   }, []);
 
@@ -109,10 +110,11 @@ export default function Dashboard() {
     await saveProjects(updated);
   }
 
-  async function sendMessage() {
-    if (!prompt.trim() || loading) return;
+  async function sendMessage(customPrompt?: string) {
+    const messageToSend = customPrompt || prompt;
+    if (!messageToSend.trim() || loading) return;
     
-    const userMessage: Message = { role: "user", content: prompt };
+    const userMessage: Message = { role: "user", content: messageToSend };
     const newMessages = [...messages, userMessage];
     setMessages(newMessages);
     setPrompt("");
@@ -134,7 +136,7 @@ export default function Dashboard() {
       const res = await fetch("/api/stream", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ prompt, history }),
+        body: JSON.stringify({ prompt: messageToSend, history }),
       });
 
       if (res.status === 429) {
@@ -194,6 +196,14 @@ export default function Dashboard() {
     }
     
     setLoading(false);
+  }
+
+  function submitError() {
+    if (!errorText.trim()) return;
+    const errorPrompt = `Bitte fix diesen Fehler aus der Roblox Output Konsole:\n\n${errorText}`;
+    setShowErrorModal(false);
+    setErrorText("");
+    sendMessage(errorPrompt);
   }
 
   async function checkout(planName: string) {
@@ -303,6 +313,9 @@ export default function Dashboard() {
         .suggestion:hover { border-color:rgba(232,80,10,0.3); color:#F5F2ED; }
 
         .input-area { padding:1rem 2rem 1.5rem; flex-shrink:0; max-width:800px; margin:0 auto; width:100%; }
+        .input-toolbar { display:flex; justify-content:flex-end; margin-bottom:0.5rem; }
+        .error-btn { background:transparent; border:0.5px solid rgba(255,95,87,0.3); color:#FF5F57; padding:0.35rem 0.75rem; border-radius:6px; font-family:'DM Sans',sans-serif; font-size:0.78rem; cursor:pointer; transition:all 0.2s; display:flex; align-items:center; gap:0.4rem; }
+        .error-btn:hover { background:rgba(255,95,87,0.1); border-color:rgba(255,95,87,0.6); }
         .input-wrapper { background:var(--card-bg); border:0.5px solid var(--border); border-radius:12px; padding:0.75rem 1rem; display:flex; align-items:flex-end; gap:0.75rem; transition:border-color 0.2s; }
         .input-wrapper:focus-within { border-color:rgba(232,80,10,0.4); }
         .input-wrapper textarea { flex:1; background:transparent; border:none; color:#F5F2ED; font-family:'DM Sans',sans-serif; font-size:0.9rem; resize:none; outline:none; max-height:120px; line-height:1.5; }
@@ -310,7 +323,45 @@ export default function Dashboard() {
         .send-btn:hover { background:#FF6B2B; }
         .send-btn:disabled { background:#333; cursor:not-allowed; }
         .input-hint { font-size:0.72rem; color:var(--gray); margin-top:0.5rem; text-align:center; }
+
+        .modal-overlay { position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(0,0,0,0.7); display:flex; align-items:center; justify-content:center; z-index:1000; }
+        .modal { background:#1A1A18; border:0.5px solid rgba(255,255,255,0.12); border-radius:16px; padding:2rem; max-width:500px; width:90%; }
+        .modal-title { font-family:'Syne',sans-serif; font-size:1.2rem; font-weight:700; margin-bottom:0.5rem; }
+        .modal-sub { color:var(--gray); font-size:0.85rem; margin-bottom:1.25rem; line-height:1.5; }
+        .modal-textarea { width:100%; background:rgba(0,0,0,0.3); border:0.5px solid var(--border); border-radius:8px; padding:0.75rem; color:#F5F2ED; font-family:'Courier New',monospace; font-size:0.82rem; resize:none; outline:none; min-height:120px; line-height:1.6; }
+        .modal-textarea:focus { border-color:rgba(255,95,87,0.4); }
+        .modal-btns { display:flex; gap:0.75rem; margin-top:1.25rem; }
+        .modal-cancel { flex:1; background:transparent; border:0.5px solid var(--border); color:var(--gray); padding:0.75rem; border-radius:8px; font-family:'DM Sans',sans-serif; font-size:0.9rem; cursor:pointer; }
+        .modal-cancel:hover { color:#F5F2ED; }
+        .modal-submit { flex:1; background:#FF5F57; border:none; color:white; padding:0.75rem; border-radius:8px; font-family:'DM Sans',sans-serif; font-size:0.9rem; font-weight:500; cursor:pointer; transition:background 0.2s; }
+        .modal-submit:hover { background:#FF3B32; }
+        .modal-submit:disabled { opacity:0.5; cursor:not-allowed; }
       `}</style>
+
+      {/* Error Modal */}
+      {showErrorModal && (
+        <div className="modal-overlay" onClick={() => setShowErrorModal(false)}>
+          <div className="modal" onClick={e => e.stopPropagation()}>
+            <div className="modal-title">🐛 Fehler melden</div>
+            <p className="modal-sub">
+              Kopiere den Fehler aus der Roblox Output Konsole und füge ihn hier ein. Kodwerk wird ihn automatisch fixen!
+            </p>
+            <textarea
+              className="modal-textarea"
+              placeholder="z.B. ServerScriptService.CoinCollector:12: attempt to index nil value..."
+              value={errorText}
+              onChange={e => setErrorText(e.target.value)}
+              autoFocus
+            />
+            <div className="modal-btns">
+              <button className="modal-cancel" onClick={() => setShowErrorModal(false)}>Abbrechen</button>
+              <button className="modal-submit" onClick={submitError} disabled={!errorText.trim()}>
+                Fehler fixen ⚡
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       <div className="topbar">
         <a href="/" className="logo">Kod<span>werk</span></a>
@@ -428,6 +479,11 @@ export default function Dashboard() {
           )}
 
           <div className="input-area">
+            <div className="input-toolbar">
+              <button className="error-btn" onClick={() => setShowErrorModal(true)}>
+                🐛 Fehler melden
+              </button>
+            </div>
             <div className="input-wrapper">
               <textarea
                 ref={textareaRef}
@@ -441,7 +497,7 @@ export default function Dashboard() {
                 onKeyDown={handleKeyDown}
                 rows={1}
               />
-              <button className="send-btn" onClick={sendMessage} disabled={loading || !prompt.trim()}>
+              <button className="send-btn" onClick={() => sendMessage()} disabled={loading || !prompt.trim()}>
                 ↑
               </button>
             </div>
