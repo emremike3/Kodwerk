@@ -25,6 +25,7 @@ export default function Dashboard() {
   const [remaining, setRemaining] = useState<number>(3);
   const [plan, setPlan] = useState("free");
   const [checkoutLoading, setCheckoutLoading] = useState("");
+  const [projectsLoading, setProjectsLoading] = useState(true);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
@@ -36,36 +37,54 @@ export default function Dashboard() {
         setPlan(data.plan);
       });
 
-    const saved = localStorage.getItem("kodwerk_projects");
-    if (saved) {
-      const parsed = JSON.parse(saved);
-      setProjects(parsed);
-      if (parsed.length > 0) {
-        setActiveProjectId(parsed[0].id);
-        setMessages(parsed[0].messages);
-      }
-    } else {
-      createNewProject();
-    }
+    loadProjects();
   }, []);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
-  function saveProjects(updatedProjects: Project[]) {
-    setProjects(updatedProjects);
-    localStorage.setItem("kodwerk_projects", JSON.stringify(updatedProjects));
+  async function loadProjects() {
+    setProjectsLoading(true);
+    try {
+      const res = await fetch("/api/projects");
+      const data = await res.json();
+      const loaded = data.projects || [];
+      setProjects(loaded);
+      if (loaded.length > 0) {
+        setActiveProjectId(loaded[0].id);
+        setMessages(loaded[0].messages || []);
+      } else {
+        createNewProject(loaded);
+      }
+    } catch {
+      createNewProject([]);
+    }
+    setProjectsLoading(false);
   }
 
-  function createNewProject() {
+  async function saveProjects(updatedProjects: Project[]) {
+    setProjects(updatedProjects);
+    try {
+      await fetch("/api/projects", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ projects: updatedProjects }),
+      });
+    } catch {
+      console.error("Fehler beim Speichern");
+    }
+  }
+
+  function createNewProject(existingProjects?: Project[]) {
+    const current = existingProjects ?? projects;
     const newProject: Project = {
       id: Date.now().toString(),
-      name: `Neues Projekt`,
+      name: "Neues Projekt",
       messages: [],
       createdAt: Date.now(),
     };
-    const updated = [newProject, ...projects];
+    const updated = [newProject, ...current];
     saveProjects(updated);
     setActiveProjectId(newProject.id);
     setMessages([]);
@@ -75,19 +94,19 @@ export default function Dashboard() {
     const project = projects.find(p => p.id === projectId);
     if (project) {
       setActiveProjectId(projectId);
-      setMessages(project.messages);
+      setMessages(project.messages || []);
     }
   }
 
-  function updateProjectMessages(projectId: string, newMessages: Message[]) {
+  async function updateProjectMessages(projectId: string, newMessages: Message[]) {
     const updated = projects.map(p => 
       p.id === projectId ? { 
         ...p, 
-        messages: newMessages, 
+        messages: newMessages,
         name: newMessages.find(m => m.role === "user")?.content.slice(0, 30) || p.name 
       } : p
     );
-    saveProjects(updated);
+    await saveProjects(updated);
   }
 
   async function sendMessage() {
@@ -122,7 +141,7 @@ export default function Dashboard() {
         const errorMsg: Message = { role: "assistant", content: "❌ Tageslimit erreicht! Upgrade auf Pro für mehr Anfragen.", isStreaming: false };
         const final = [...newMessages, errorMsg];
         setMessages(final);
-        if (activeProjectId) updateProjectMessages(activeProjectId, final);
+        if (activeProjectId) await updateProjectMessages(activeProjectId, final);
         setLoading(false);
         return;
       }
@@ -168,7 +187,7 @@ export default function Dashboard() {
         isStreaming: false 
       }];
       setMessages(finalMessages);
-      if (activeProjectId) updateProjectMessages(activeProjectId, finalMessages);
+      if (activeProjectId) await updateProjectMessages(activeProjectId, finalMessages);
 
     } catch (err) {
       console.error(err);
@@ -245,6 +264,7 @@ export default function Dashboard() {
         .project-item { padding:0.6rem 0.75rem; border-radius:8px; cursor:pointer; font-size:0.85rem; color:var(--gray); transition:all 0.15s; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
         .project-item:hover { background:rgba(255,255,255,0.05); color:#F5F2ED; }
         .project-item.active { background:rgba(232,80,10,0.1); color:#F5F2ED; border:0.5px solid rgba(232,80,10,0.2); }
+        .loading-text { color:var(--gray); font-size:0.8rem; padding:1rem; }
         
         .upgrade-sidebar { padding:1rem; border-top:0.5px solid var(--border); }
         .upgrade-sidebar-btn { width:100%; background:transparent; border:0.5px solid var(--border); color:var(--gray); padding:0.5rem; border-radius:8px; font-family:'DM Sans',sans-serif; font-size:0.78rem; cursor:pointer; transition:all 0.2s; margin-bottom:0.5rem; }
@@ -306,20 +326,24 @@ export default function Dashboard() {
       <div className="body">
         <div className="sidebar">
           <div className="sidebar-header">
-            <button className="new-project-btn" onClick={createNewProject}>
+            <button className="new-project-btn" onClick={() => createNewProject()}>
               ✚ Neues Projekt
             </button>
           </div>
           <div className="projects-list">
-            {projects.map(project => (
-              <div
-                key={project.id}
-                className={`project-item ${activeProjectId === project.id ? "active" : ""}`}
-                onClick={() => switchProject(project.id)}
-              >
-                {project.name}
-              </div>
-            ))}
+            {projectsLoading ? (
+              <div className="loading-text">Lädt...</div>
+            ) : (
+              projects.map(project => (
+                <div
+                  key={project.id}
+                  className={`project-item ${activeProjectId === project.id ? "active" : ""}`}
+                  onClick={() => switchProject(project.id)}
+                >
+                  {project.name}
+                </div>
+              ))
+            )}
           </div>
           
           {plan === "free" && (
