@@ -15,39 +15,73 @@ const anthropic = new Anthropic({
 const FREE_LIMIT = 3;
 const PRO_LIMIT = 1000;
 
-const SYSTEM_PROMPT = `Du bist ein erfahrener Roblox Studio Entwickler namens Kodwerk AI. Generiere funktionierenden Luau Code.
+const SYSTEM_PROMPT = `Du bist ein erfahrener Roblox Studio Entwickler namens Kodwerk AI. Du kannst zwei Arten von Aufgaben erledigen:
 
-Wenn du Code generierst, antworte in diesem Format:
-1. Kurze Erklärung was du machst (1-2 Sätze auf Deutsch)
-2. Dann ALLE benötigten Scripts in einem JSON Block:
+1. SCRIPTS schreiben die im Spiel laufen
+2. OBJEKTE direkt in Studio bauen (sichtbar ohne Playtest)
 
+Antworte immer mit einer kurzen Erklärung auf Deutsch, dann dem JSON Block.
+
+FORMAT FÜR SCRIPTS (Spiellogik, Systeme, GUI):
 <kodwerk>
 [
-  {"code": "...", "scriptType": "LocalScript", "location": "StarterGui", "name": "ShopGui"},
-  {"code": "...", "scriptType": "Script", "location": "ServerScriptService", "name": "ShopServer"},
-  {"code": "...", "scriptType": "ModuleScript", "location": "ReplicatedStorage", "name": "ShopModule"}
+  {"type": "script", "code": "...", "scriptType": "LocalScript", "location": "StarterPlayerScripts", "name": "ScriptName"}
 ]
 </kodwerk>
 
-WICHTIG: Gib IMMER ein Array zurück, auch wenn es nur ein Script ist!
+FORMAT FÜR OBJEKTE (Bauen, Spawnen von sichtbaren Teilen):
+<kodwerk>
+[
+  {
+    "type": "build",
+    "name": "Diamond",
+    "shape": "Block",
+    "size": [2, 2, 2],
+    "position": [0, 5, 0],
+    "color": [0.2, 0.8, 1],
+    "material": "Neon",
+    "anchored": true,
+    "transparency": 0.3,
+    "count": 10,
+    "spread": 50
+  }
+]
+</kodwerk>
 
-ORTE REGELN:
-- Input/Bewegung/Springen/Fliegen → StarterPlayerScripts (LocalScript)
-- Charakter Aussehen/Animationen → StarterCharacterScripts (LocalScript)
-- GUI/Buttons/Menus → StarterGui (LocalScript)
-- Spawning/Server Logik/Münzen → ServerScriptService (Script)
-- Shared Funktionen/RemoteEvents → ReplicatedStorage (ModuleScript)
-- Systeme die Client UND Server brauchen → mehrere Scripts generieren!
+REGELN FÜR OBJEKTE:
+- shape kann sein: Block, Sphere, Cylinder, Wedge
+- material kann sein: Neon, SmoothPlastic, Metal, Wood, Grass, Sand, Ice, Glass
+- color ist RGB von 0-1
+- count = wie viele Objekte spawnen
+- spread = wie weit sie verteilt werden (in Studs)
+- position = Startposition [x, y, z]
+- Für Münzen: Cylinder, gelb, Metal
+- Für Diamanten: Block, hellblau, Neon, transparency 0.2
+- Für Kristalle: Block, lila, Neon
+- Für Bäume: mehrere Objekte (Stamm + Krone)
 
-WICHTIGE ROBLOX REGELN:
+GEMISCHTE ANTWORTEN MÖGLICH:
+<kodwerk>
+[
+  {"type": "build", "name": "Coin", ...},
+  {"type": "script", "code": "...", "scriptType": "Script", "location": "ServerScriptService", "name": "CoinCollector"}
+]
+</kodwerk>
+
+SCRIPT REGELN:
 - NIEMALS BodyVelocity, BodyGyro benutzen - DEPRECATED!
 - Für Velocity: rootPart.AssemblyLinearVelocity
 - IMMER game:GetService() benutzen
 - IMMER WaitForChild() benutzen
 - Character: player.Character or player.CharacterAdded:Wait()
-- Für Shop/Coins/Items: RemoteEvents in ReplicatedStorage benutzen
-- Server Script verwaltet Coins und gibt Items, Client Script zeigt GUI
-- Vollständiger funktionierender Code ohne TODOs`;
+- Vollständiger funktionierender Code ohne TODOs
+
+SCRIPT ORTE:
+- Input/Bewegung/Springen/Fliegen → StarterPlayerScripts (LocalScript)
+- Charakter Animationen → StarterCharacterScripts (LocalScript)
+- GUI/Buttons/Menus → StarterGui (LocalScript)
+- Spawning/Server Logik → ServerScriptService (Script)
+- Shared Funktionen → ReplicatedStorage (ModuleScript)`;
 
 export async function POST(req: NextRequest) {
   const { userId } = await auth();
@@ -107,30 +141,49 @@ export async function POST(req: NextRequest) {
       if (match) {
         try {
           const parsed = JSON.parse(match[1].trim());
-          const scripts = Array.isArray(parsed) ? parsed : [parsed];
+          const items = Array.isArray(parsed) ? parsed : [parsed];
           
-          const processedScripts = scripts.map((s: any) => ({
-            code: (s.code || "").replace(/\\n/g, "\n"),
-            name: s.name || "KodwerkScript",
-            scriptType: s.scriptType || "LocalScript",
-            location: s.location || "StarterPlayerScripts"
-          }));
+          const processedItems = items.map((item: any) => {
+            if (item.type === "build") {
+              return {
+                type: "build",
+                name: item.name || "Part",
+                shape: item.shape || "Block",
+                size: item.size || [2, 2, 2],
+                position: item.position || [0, 5, 0],
+                color: item.color || [1, 1, 1],
+                material: item.material || "SmoothPlastic",
+                anchored: item.anchored !== false,
+                transparency: item.transparency || 0,
+                count: item.count || 1,
+                spread: item.spread || 0,
+              };
+            } else {
+              return {
+                type: "script",
+                code: (item.code || "").replace(/\\n/g, "\n"),
+                name: item.name || "KodwerkScript",
+                scriptType: item.scriptType || "LocalScript",
+                location: item.location || "StarterPlayerScripts"
+              };
+            }
+          });
 
-          await redis.set(`pending:${userId}`, processedScripts, { ex: 300 });
+          await redis.set(`pending:${userId}`, processedItems, { ex: 300 });
 
           if (key) {
             const used = (await redis.get<number>(key)) || 0;
             await redis.set(key, used + 1, { ex: plan === "pro" ? 2592000 : 86400 });
           }
 
-          controller.enqueue(encoder.encode(`data: ${JSON.stringify({ done: true, scripts: processedScripts })}\n\n`));
+          controller.enqueue(encoder.encode(`data: ${JSON.stringify({ done: true, items: processedItems })}\n\n`));
         } catch (e) {
           console.error("Parse error:", e);
           controller.enqueue(encoder.encode(`data: ${JSON.stringify({ done: true })}\n\n`));
         }
       } else {
         controller.enqueue(encoder.encode(`data: ${JSON.stringify({ done: true })}\n\n`));
-      }
+        }
       
       controller.close();
     }
