@@ -37,7 +37,7 @@ export default function SettingsPage() {
 
   function getPlanName() {
     if (plan === "pro") return "Pro — 12€/Monat";
-    if (plan === "unlimited") return "Unlimited — 29€/Monat";
+    if (plan === "unlimited") return "Ultimate — 29€/Monat";
     return "Kostenlos";
   }
 
@@ -92,9 +92,7 @@ export default function SettingsPage() {
               Bist du sicher dass du dein Abo kündigen möchtest? Du behältst deinen Zugang bis zum Ende der aktuellen Abrechnungsperiode.
             </p>
             <div className="modal-btns">
-              <button className="modal-cancel" onClick={() => setShowModal(false)}>
-                Abbrechen
-              </button>
+              <button className="modal-cancel" onClick={() => setShowModal(false)}>Abbrechen</button>
               <button className="modal-confirm" onClick={cancelSubscription} disabled={cancelLoading}>
                 {cancelLoading ? "Wird gekündigt..." : "Ja, kündigen"}
               </button>
