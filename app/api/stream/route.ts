@@ -1,10 +1,15 @@
 import { auth } from "@clerk/nextjs/server";
 import { NextRequest } from "next/server";
 import { Redis } from "@upstash/redis";
+import Anthropic from "@anthropic-ai/sdk";
 
 const redis = new Redis({
   url: process.env.KV_REST_API_URL || "",
   token: process.env.KV_REST_API_TOKEN || "",
+});
+
+const anthropic = new Anthropic({
+  apiKey: process.env.ANTHROPIC_API_KEY,
 });
 
 const FREE_LIMIT = 3;
@@ -38,7 +43,7 @@ WICHTIGE ROBLOX REGELN:
 - IMMER game:GetService() benutzen
 - IMMER WaitForChild() benutzen
 - Character: player.Character or player.CharacterAdded:Wait()
-- Für GUI: Moderne, cleane Designs mit abgerundeten Ecken, Schatten, smooth Animationen
+- Für GUI: Moderne cleane Designs mit abgerundeten Ecken und smooth Animationen
 - Für Shop/Coins/Items: RemoteEvents in ReplicatedStorage benutzen
 - Vollständiger funktionierender Code ohne TODOs
 
@@ -89,25 +94,17 @@ export async function POST(req: NextRequest) {
 
   const { prompt, history = [] } = await req.json();
 
-  const messages = [
-    { role: "system", content: SYSTEM_PROMPT },
-    ...history,
-    { role: "user", content: prompt }
-  ];
+  const messages = history.map((m: any) => ({
+    role: m.role as "user" | "assistant",
+    content: m.content
+  }));
+  messages.push({ role: "user", content: prompt });
 
-  const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      "Authorization": `Bearer ${process.env.OPENROUTER_API_KEY}`,
-      "HTTP-Referer": "https://kodwerk.de",
-      "X-Title": "Kodwerk",
-    },
-    body: JSON.stringify({
-      model: "google/gemini-2.5-pro",
-      messages,
-      stream: true,
-    }),
+  const stream = await anthropic.messages.stream({
+    model: "claude-sonnet-4-6",
+    max_tokens: 8096,
+    system: SYSTEM_PROMPT,
+    messages,
   });
 
   const encoder = new TextEncoder();
@@ -115,27 +112,12 @@ export async function POST(req: NextRequest) {
   const readable = new ReadableStream({
     async start(controller) {
       let fullText = "";
-      const reader = response.body?.getReader();
-      const decoder = new TextDecoder();
-
-      while (reader) {
-        const { done, value } = await reader.read();
-        if (done) break;
-
-        const chunk = decoder.decode(value);
-        const lines = chunk.split("\n");
-
-        for (const line of lines) {
-          if (line.startsWith("data: ") && line !== "data: [DONE]") {
-            try {
-              const data = JSON.parse(line.slice(6));
-              const text = data.choices?.[0]?.delta?.content || "";
-              if (text) {
-                fullText += text;
-                controller.enqueue(encoder.encode(`data: ${JSON.stringify({ text })}\n\n`));
-              }
-            } catch {}
-          }
+      
+      for await (const chunk of stream) {
+        if (chunk.type === "content_block_delta" && chunk.delta.type === "text_delta") {
+          const text = chunk.delta.text;
+          fullText += text;
+          controller.enqueue(encoder.encode(`data: ${JSON.stringify({ text })}\n\n`));
         }
       }
 
