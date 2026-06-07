@@ -10,7 +10,8 @@ const redis = new Redis({
 });
 
 const FREE_LIMIT = 3;
-const PRO_LIMIT = 1000;
+const PRO_LIMIT = 200;
+const ULTIMATE_LIMIT = 500;
 
 export async function GET() {
   const { userId } = await auth();
@@ -42,7 +43,10 @@ export async function GET() {
   }
 
   if (plan === "unlimited") {
-    return NextResponse.json({ remaining: -1, plan: "unlimited", renewalDate, cancelledDate });
+    const month = new Date().toISOString().substring(0, 7);
+    const key = `credits:${userId}:${month}`;
+    const used = (await redis.get<number>(key)) || 0;
+    return NextResponse.json({ remaining: ULTIMATE_LIMIT - used, plan: "unlimited", renewalDate, cancelledDate });
   }
 
   if (plan === "pro") {

@@ -140,7 +140,7 @@ export default function Dashboard() {
       });
 
       if (res.status === 429) {
-        const errorMsg: Message = { role: "assistant", content: "❌ Tageslimit erreicht! Upgrade auf Pro für mehr Anfragen.", isStreaming: false };
+        const errorMsg: Message = { role: "assistant", content: "❌ Limit erreicht! Upgrade für mehr Anfragen.", isStreaming: false };
         const final = [...newMessages, errorMsg];
         setMessages(final);
         if (activeProjectId) await updateProjectMessages(activeProjectId, final);
@@ -223,13 +223,13 @@ export default function Dashboard() {
   }
 
   function getCreditsText() {
-    if (plan === "unlimited") return "∞ Unlimited";
-    if (plan === "pro") return `${remaining}/1000 Pro`;
+    if (plan === "unlimited") return `${remaining}/500 Ultimate`;
+    if (plan === "pro") return `${remaining}/200 Pro`;
     return `${remaining}/3 heute`;
   }
 
   function getPlanBadge() {
-    if (plan === "unlimited") return <span style={{background:"#7C3AED", color:"white", padding:"0.15rem 0.5rem", borderRadius:"100px", fontSize:"0.7rem", fontWeight:600}}>UNLIMITED</span>;
+    if (plan === "unlimited") return <span style={{background:"#7C3AED", color:"white", padding:"0.15rem 0.5rem", borderRadius:"100px", fontSize:"0.7rem", fontWeight:600}}>ULTIMATE</span>;
     if (plan === "pro") return <span style={{background:"#E8500A", color:"white", padding:"0.15rem 0.5rem", borderRadius:"100px", fontSize:"0.7rem", fontWeight:600}}>PRO</span>;
     return null;
   }
@@ -338,7 +338,6 @@ export default function Dashboard() {
         .modal-submit:disabled { opacity:0.5; cursor:not-allowed; }
       `}</style>
 
-      {/* Error Modal */}
       {showErrorModal && (
         <div className="modal-overlay" onClick={() => setShowErrorModal(false)}>
           <div className="modal" onClick={e => e.stopPropagation()}>
@@ -403,7 +402,15 @@ export default function Dashboard() {
                 ⚡ Pro — 12€/Monat
               </button>
               <button className="upgrade-sidebar-btn purple" onClick={() => checkout("unlimited")} disabled={checkoutLoading === "unlimited"}>
-                ∞ Unlimited — 29€/Monat
+                👑 Ultimate — 29€/Monat
+              </button>
+            </div>
+          )}
+
+          {plan === "pro" && (
+            <div className="upgrade-sidebar">
+              <button className="upgrade-sidebar-btn purple" onClick={() => checkout("unlimited")} disabled={checkoutLoading === "unlimited"}>
+                👑 Ultimate — 29€/Monat
               </button>
             </div>
           )}
