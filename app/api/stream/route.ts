@@ -1,35 +1,48 @@
 import { auth } from "@clerk/nextjs/server";
 import { NextRequest } from "next/server";
 import { Redis } from "@upstash/redis";
-import Anthropic from "@anthropic-ai/sdk";
 
 const redis = new Redis({
   url: process.env.KV_REST_API_URL || "",
   token: process.env.KV_REST_API_TOKEN || "",
 });
 
-const anthropic = new Anthropic({
-  apiKey: process.env.ANTHROPIC_API_KEY,
-});
-
 const FREE_LIMIT = 3;
 const PRO_LIMIT = 1000;
 
-const SYSTEM_PROMPT = `Du bist ein erfahrener Roblox Studio Entwickler namens Kodwerk AI. Du kannst zwei Arten von Aufgaben erledigen:
+const SYSTEM_PROMPT = `Du bist ein erfahrener Roblox Studio Entwickler namens Kodwerk AI. Generiere funktionierenden Luau Code.
 
-1. SCRIPTS schreiben die im Spiel laufen
-2. OBJEKTE direkt in Studio bauen (sichtbar ohne Playtest)
+Wenn du Code generierst, antworte in diesem Format:
+1. Kurze Erklärung was du machst (1-2 Sätze auf Deutsch)
+2. Dann ALLE benötigten Scripts in einem JSON Block:
 
-Antworte immer mit einer kurzen Erklärung auf Deutsch, dann dem JSON Block.
-
-FORMAT FÜR SCRIPTS (Spiellogik, Systeme, GUI):
 <kodwerk>
 [
-  {"type": "script", "code": "...", "scriptType": "LocalScript", "location": "StarterPlayerScripts", "name": "ScriptName"}
+  {"type": "script", "code": "...", "scriptType": "LocalScript", "location": "StarterGui", "name": "ShopGui"}
 ]
 </kodwerk>
 
-FORMAT FÜR OBJEKTE (Bauen, Spawnen von sichtbaren Teilen):
+WICHTIG: Gib IMMER ein Array zurück, auch wenn es nur ein Script ist!
+
+ORTE REGELN:
+- Input/Bewegung/Springen/Fliegen → StarterPlayerScripts (LocalScript)
+- Charakter Animationen → StarterCharacterScripts (LocalScript)
+- GUI/Buttons/Menus → StarterGui (LocalScript)
+- Spawning/Server Logik/Münzen → ServerScriptService (Script)
+- Shared Funktionen/RemoteEvents → ReplicatedStorage (ModuleScript)
+- Systeme die Client UND Server brauchen → mehrere Scripts!
+
+WICHTIGE ROBLOX REGELN:
+- NIEMALS BodyVelocity, BodyGyro benutzen - DEPRECATED!
+- Für Velocity: rootPart.AssemblyLinearVelocity
+- IMMER game:GetService() benutzen
+- IMMER WaitForChild() benutzen
+- Character: player.Character or player.CharacterAdded:Wait()
+- Für GUI: Moderne, cleane Designs mit abgerundeten Ecken, Schatten, smooth Animationen
+- Für Shop/Coins/Items: RemoteEvents in ReplicatedStorage benutzen
+- Vollständiger funktionierender Code ohne TODOs
+
+FÜR OBJEKTE direkt in Studio bauen:
 <kodwerk>
 [
   {
@@ -46,42 +59,7 @@ FORMAT FÜR OBJEKTE (Bauen, Spawnen von sichtbaren Teilen):
     "spread": 50
   }
 ]
-</kodwerk>
-
-REGELN FÜR OBJEKTE:
-- shape kann sein: Block, Sphere, Cylinder, Wedge
-- material kann sein: Neon, SmoothPlastic, Metal, Wood, Grass, Sand, Ice, Glass
-- color ist RGB von 0-1
-- count = wie viele Objekte spawnen
-- spread = wie weit sie verteilt werden (in Studs)
-- position = Startposition [x, y, z]
-- Für Münzen: Cylinder, gelb, Metal
-- Für Diamanten: Block, hellblau, Neon, transparency 0.2
-- Für Kristalle: Block, lila, Neon
-- Für Bäume: mehrere Objekte (Stamm + Krone)
-
-GEMISCHTE ANTWORTEN MÖGLICH:
-<kodwerk>
-[
-  {"type": "build", "name": "Coin", ...},
-  {"type": "script", "code": "...", "scriptType": "Script", "location": "ServerScriptService", "name": "CoinCollector"}
-]
-</kodwerk>
-
-SCRIPT REGELN:
-- NIEMALS BodyVelocity, BodyGyro benutzen - DEPRECATED!
-- Für Velocity: rootPart.AssemblyLinearVelocity
-- IMMER game:GetService() benutzen
-- IMMER WaitForChild() benutzen
-- Character: player.Character or player.CharacterAdded:Wait()
-- Vollständiger funktionierender Code ohne TODOs
-
-SCRIPT ORTE:
-- Input/Bewegung/Springen/Fliegen → StarterPlayerScripts (LocalScript)
-- Charakter Animationen → StarterCharacterScripts (LocalScript)
-- GUI/Buttons/Menus → StarterGui (LocalScript)
-- Spawning/Server Logik → ServerScriptService (Script)
-- Shared Funktionen → ReplicatedStorage (ModuleScript)`;
+</kodwerk>`;
 
 export async function POST(req: NextRequest) {
   const { userId } = await auth();
@@ -112,15 +90,24 @@ export async function POST(req: NextRequest) {
   const { prompt, history = [] } = await req.json();
 
   const messages = [
+    { role: "system", content: SYSTEM_PROMPT },
     ...history,
-    { role: "user" as const, content: prompt }
+    { role: "user", content: prompt }
   ];
 
-  const stream = await anthropic.messages.stream({
-    model: "claude-sonnet-4-6",
-    max_tokens: 8096,
-    system: SYSTEM_PROMPT,
-    messages,
+  const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "Authorization": `Bearer ${process.env.OPENROUTER_API_KEY}`,
+      "HTTP-Referer": "https://kodwerk.de",
+      "X-Title": "Kodwerk",
+    },
+    body: JSON.stringify({
+      model: "google/gemini-2.5-pro",
+      messages,
+      stream: true,
+    }),
   });
 
   const encoder = new TextEncoder();
@@ -128,12 +115,27 @@ export async function POST(req: NextRequest) {
   const readable = new ReadableStream({
     async start(controller) {
       let fullText = "";
-      
-      for await (const chunk of stream) {
-        if (chunk.type === "content_block_delta" && chunk.delta.type === "text_delta") {
-          const text = chunk.delta.text;
-          fullText += text;
-          controller.enqueue(encoder.encode(`data: ${JSON.stringify({ text })}\n\n`));
+      const reader = response.body?.getReader();
+      const decoder = new TextDecoder();
+
+      while (reader) {
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        const chunk = decoder.decode(value);
+        const lines = chunk.split("\n");
+
+        for (const line of lines) {
+          if (line.startsWith("data: ") && line !== "data: [DONE]") {
+            try {
+              const data = JSON.parse(line.slice(6));
+              const text = data.choices?.[0]?.delta?.content || "";
+              if (text) {
+                fullText += text;
+                controller.enqueue(encoder.encode(`data: ${JSON.stringify({ text })}\n\n`));
+              }
+            } catch {}
+          }
         }
       }
 
@@ -183,7 +185,7 @@ export async function POST(req: NextRequest) {
         }
       } else {
         controller.enqueue(encoder.encode(`data: ${JSON.stringify({ done: true })}\n\n`));
-        }
+      }
       
       controller.close();
     }
