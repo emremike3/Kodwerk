@@ -44,6 +44,7 @@ export default function Home() {
         :root {
           --orange: #E8500A;
           --orange-light: #FF6B2B;
+          --purple: #7C3AED;
           --black: #0E0E0E;
           --white: #F5F2ED;
           --gray: #6B6860;
@@ -113,11 +114,12 @@ export default function Home() {
         .plan-features { list-style:none; display:flex; flex-direction:column; gap:0.65rem; margin-bottom:1.5rem; }
         .plan-features li { font-size:0.85rem; color:var(--gray); display:flex; align-items:center; gap:8px; }
         .plan-features li::before { content:'✓'; color:var(--orange); font-weight:700; font-size:0.8rem; }
+        .plan-features.ultimate li::before { color:var(--purple); }
         .plan-btn { width:100%; padding:0.75rem; border-radius:8px; font-family:'DM Sans',sans-serif; font-size:0.9rem; font-weight:500; cursor:pointer; transition:all 0.2s; border:none; }
         .plan-btn-outline { background:transparent; border:0.5px solid var(--border); color:var(--white); }
         .plan-btn-filled { background:var(--orange); color:var(--white); }
         .plan-btn-filled:hover { background:var(--orange-light); }
-        .plan-btn-purple { background:#7C3AED; color:var(--white); }
+        .plan-btn-purple { background:var(--purple); color:var(--white); }
         .plan-btn-purple:hover { background:#6D28D9; }
         .plan-btn-current { background:rgba(255,255,255,0.08); color:var(--gray); cursor:default; }
         footer { border-top:0.5px solid var(--border); padding:2rem 2.5rem; display:flex; align-items:center; justify-content:space-between; max-width:900px; margin:0 auto; }
@@ -215,7 +217,7 @@ export default function Home() {
           <div className="feature-card">
             <div className="feature-icon">🐛</div>
             <div className="feature-title">Fehler finden & fixen</div>
-            <p className="feature-desc">Kodwerk liest deine Studio-Konsole mit und hilft dir, Bugs schnell aufzuspüren und zu lösen.</p>
+            <p className="feature-desc">Kodwerk analysiert deinen Fehler und generiert automatisch einen Fix.</p>
           </div>
           <div className="feature-card">
             <div className="feature-icon">↩️</div>
@@ -239,8 +241,8 @@ export default function Home() {
               <li>Deutsche Oberfläche</li>
               <li>Community Support</li>
             </ul>
-            <button 
-              className={`plan-btn ${currentPlan === "free" ? "plan-btn-current" : "plan-btn-outline"}`}
+            <button
+              className={`plan-btn ${currentPlan === "free" && isSignedIn ? "plan-btn-current" : "plan-btn-outline"}`}
               onClick={() => window.location.href = isSignedIn ? "/dashboard" : "/sign-in"}
             >
               {currentPlan === "free" && isSignedIn ? "Aktueller Plan ✓" : isSignedIn ? "Zum Dashboard" : "Kostenlos starten"}
@@ -252,12 +254,12 @@ export default function Home() {
             <div className="plan-price">12€ <span>/ Monat</span></div>
             <div className="plan-desc">Für aktive Entwickler</div>
             <ul className="plan-features">
-              <li>1.000 Anfragen pro Monat</li>
+              <li>200 Anfragen pro Monat</li>
               <li>Auto-Sync mit Studio</li>
               <li>Prioritäts-Support</li>
               <li>Früher Zugang zu Features</li>
             </ul>
-            <button 
+            <button
               className={`plan-btn ${currentPlan === "pro" ? "plan-btn-current" : "plan-btn-filled"}`}
               onClick={() => currentPlan === "pro" ? window.location.href = "/dashboard" : checkout("pro")}
             >
@@ -266,20 +268,20 @@ export default function Home() {
           </div>
           <div className="pricing-card" style={{borderColor: "#7C3AED"}}>
             <div className="pricing-badge" style={{background: "#7C3AED"}}>PREMIUM</div>
-            <div className="plan-name">Unlimited</div>
+            <div className="plan-name">Ultimate</div>
             <div className="plan-price">29€ <span>/ Monat</span></div>
             <div className="plan-desc">Für ernsthafte Entwickler</div>
-            <ul className="plan-features">
-              <li>Unbegrenzte Anfragen</li>
+            <ul className="plan-features ultimate">
+              <li>500 Anfragen pro Monat</li>
               <li>Auto-Sync mit Studio</li>
               <li>Prioritäts-Support</li>
               <li>Früher Zugang zu Features</li>
             </ul>
-            <button 
+            <button
               className={`plan-btn ${currentPlan === "unlimited" ? "plan-btn-current" : "plan-btn-purple"}`}
               onClick={() => currentPlan === "unlimited" ? window.location.href = "/dashboard" : checkout("unlimited")}
             >
-              {currentPlan === "unlimited" ? "Aktueller Plan ✓" : "Unlimited werden"}
+              {currentPlan === "unlimited" ? "Aktueller Plan ✓" : "Ultimate werden"}
             </button>
           </div>
         </div>
